@@ -24,7 +24,9 @@ import mods.eln.sim.process.destruct.VoltageStateWatchDog;
 import mods.eln.sim.process.destruct.WorldExplosion;
 import mods.eln.sixnode.currentcable.CurrentCableDescriptor;
 import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor;
+import mods.eln.sixnode.electricalcable.UtilityCableDescriptor;
 import mods.eln.sixnode.genericcable.GenericCableDescriptor;
+import mods.eln.sixnode.lampsocket.LampSocketContainer;
 import mods.eln.sixnode.wirelesssignal.IWirelessSignalSpot;
 import mods.eln.sixnode.wirelesssignal.IWirelessSignalTx;
 import mods.eln.sixnode.wirelesssignal.WirelessUtils;
@@ -271,13 +273,30 @@ public class LampSupplyElement extends SixNodeElement implements IConfigurable {
         if (onBlockActivatedRotate(entityPlayer)) return true;
 
         ItemStack playerEquippedItem = entityPlayer.getCurrentEquippedItem();
+
+        // ElectricalCableDescriptor here covers utility cables
         GenericItemBlockUsingDamageDescriptor desc = GenericItemBlockUsingDamageDescriptor.getDescriptor(playerEquippedItem, ElectricalCableDescriptor.class);
-        if (desc instanceof ElectricalCableDescriptor) {
-            if (!((ElectricalCableDescriptor) desc).signalWire) return inventory.take(entityPlayer.getCurrentEquippedItem(), this, false, true);
-            else return false;
+        if (desc == null) GenericItemBlockUsingDamageDescriptor.getDescriptor(playerEquippedItem, CurrentCableDescriptor.class);
+
+        boolean takeItem = false;
+
+        // TODO: Add the ability to auto-trim a wire segment from an existing spool after rewriting in Kotlin
+        if (desc instanceof UtilityCableDescriptor) {
+            // TODO: NBT tag is not currently copied when accepting item from right click, so this is temporarily disabled
+            // TODO: getRemainingLengthMeters is not static and cannot be called until this file is rewritten in Kotlin
+            /*
+            int cableLength = playerEquippedItem.getRemainingLengthMeters(entityPlayer.playerEquippedItem).toInt();
+            takeItem = cableLength == LampSocketContainer.REQUIRED_CABLE_LENGTH;
+            */
+        } else if (desc instanceof ElectricalCableDescriptor) {
+            takeItem = !((ElectricalCableDescriptor) desc).signalWire;
+        } else if (desc instanceof CurrentCableDescriptor) {
+            takeItem = true;
         }
 
-        return inventory.take(entityPlayer.getCurrentEquippedItem(), this, false, true);
+        if (takeItem) {
+            return inventory.take(entityPlayer.getCurrentEquippedItem(), this, false, true);
+        } else return false;
     }
 
     @Override
@@ -347,6 +366,7 @@ public class LampSupplyElement extends SixNodeElement implements IConfigurable {
     void setupFromInventory() {
         ItemStack cableStack = getInventory().getStackInSlot(LampSupplyContainer.cableSlotId);
         if (cableStack != null) {
+            // ElectricalCableDescriptor here covers utility cables
             GenericCableDescriptor desc = (ElectricalCableDescriptor) GenericItemBlockUsingDamageDescriptor.getDescriptor(
                     cableStack, ElectricalCableDescriptor.class);
             if (desc == null) desc = (CurrentCableDescriptor) GenericItemBlockUsingDamageDescriptor.getDescriptor(

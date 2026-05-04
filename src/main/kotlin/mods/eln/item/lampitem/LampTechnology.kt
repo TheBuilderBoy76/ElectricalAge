@@ -3,6 +3,7 @@ package mods.eln.item.lampitem
 import mods.eln.Eln
 import mods.eln.i18n.I18N
 import mods.eln.misc.NominalVoltage
+import mods.eln.misc.Utils
 import kotlin.math.abs
 import kotlin.math.pow
 
@@ -56,7 +57,7 @@ data class BoilerplateLampData(
         const val MIN_LIGHT_VALUE = 0
         const val MAX_LIGHT_VALUE = 15
 
-        const val V12_NOMINAL_LIGHT_VALUE = 12
+        const val V12_NOMINAL_LIGHT_VALUE = 11
         const val V120_NOMINAL_LIGHT_VALUE = 14
         const val V240_NOMINAL_LIGHT_VALUE = 14
 
@@ -80,10 +81,8 @@ data class BoilerplateLampData(
         val configNominalLife = abs(Eln.config.getDoubleOrElse(nominalLifePath, this.nominalLifeInHours))
 
         if (configNominalLife !in MIN_LAMP_LIFE_IN_HOURS..MAX_LAMP_LIFE_IN_HOURS) {
-            Eln.LOGGER.warn(
-                I18N.tr("ELN config: Nominal lamp life of type %1$ must be within the range (%2$, %3$)! Changes not applied!",
-                this.lampType, MIN_LAMP_LIFE_IN_HOURS, MAX_LAMP_LIFE_IN_HOURS)
-            )
+            Utils.println("ELN config: Nominal lamp life of type ${this.lampType} must be within the range " +
+                    "($MIN_LAMP_LIFE_IN_HOURS, $MAX_LAMP_LIFE_IN_HOURS)! Changes not applied!")
         } else {
             this.nominalLifeInHours = configNominalLife
         }

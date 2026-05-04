@@ -31,6 +31,7 @@ import mods.eln.sim.process.destruct.VoltageStateWatchDog
 import mods.eln.sim.process.destruct.WorldExplosion
 import mods.eln.sixnode.currentcable.CurrentCableDescriptor
 import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor
+import mods.eln.sixnode.electricalcable.UtilityCableDescriptor
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.inventory.Container
 import net.minecraft.inventory.IInventory
@@ -93,33 +94,48 @@ class LampSocketElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
             return true
         }
 
-        val playerEquippedItem = getItemObject(entityPlayer.currentEquippedItem)
+        var takeItem = false
 
-        if (playerEquippedItem is BrushDescriptor) {
-            // Ignore brush use on non-paintable sockets (e.g. Streetlight)
-            if (!descriptor.paintable) return false
+        when (val equippedItemDescriptor = getItemObject(entityPlayer.currentEquippedItem)) {
+            is BrushDescriptor -> {
+                // Ignore brush use on non-paintable sockets (e.g. Streetlight)
+                if (!descriptor.paintable) return false
 
-            val brushColor = playerEquippedItem.getColor(entityPlayer.currentEquippedItem)
+                val brushColor = equippedItemDescriptor.getColor(entityPlayer.currentEquippedItem)
 
-            if (brushColor != paintColor && playerEquippedItem.use(entityPlayer.currentEquippedItem, entityPlayer)) {
-                paintColor = brushColor
-                needPublish()
+                if (brushColor != paintColor && equippedItemDescriptor.use(entityPlayer.currentEquippedItem, entityPlayer)) {
+                    paintColor = brushColor
+                    needPublish()
+                }
+
+                return true
             }
 
-            return true
-        }
+            is LampDescriptor -> {
+                takeItem = equippedItemDescriptor.lampData.technology in descriptor.acceptedLampTypes
+            }
 
-        if (playerEquippedItem is LampDescriptor) {
-            if (playerEquippedItem.lampData.technology in descriptor.acceptedLampTypes) {
-                return acceptingInventory.take(entityPlayer.currentEquippedItem, this, notifyInventoryChange = true)
+            // TODO: Add the ability to auto-trim a wire segment from an existing spool
+            is UtilityCableDescriptor -> {
+                // TODO: NBT tag is not currently copied when accepting item from right click, so this is temporarily disabled
+                /*
+                val cableLength = equippedItemDescriptor.getRemainingLengthMeters(entityPlayer.currentEquippedItem).toInt()
+                takeItem = cableLength == LampSocketContainer.REQUIRED_CABLE_LENGTH
+                */
+            }
+
+            is ElectricalCableDescriptor -> {
+                takeItem = !equippedItemDescriptor.signalWire
+            }
+
+            is CurrentCableDescriptor -> {
+                takeItem = true
             }
         }
 
-        if ((playerEquippedItem is ElectricalCableDescriptor && !playerEquippedItem.signalWire) || playerEquippedItem is CurrentCableDescriptor) {
-            return acceptingInventory.take(entityPlayer.currentEquippedItem, this, notifyInventoryChange = true)
-        }
-
-        return false
+        return if (takeItem) {
+            acceptingInventory.take(entityPlayer.currentEquippedItem, this, notifyInventoryChange = true)
+        } else false
     }
 
     /**
@@ -208,6 +224,7 @@ class LampSocketElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
             else -> {
                 val cableDescriptor = Eln.sixNodeItem.getDescriptor(cableStack)
 
+                // ElectricalCableDescriptor here covers utility cables
                 if (cableDescriptor is ElectricalCableDescriptor || cableDescriptor is CurrentCableDescriptor) {
                     cableDescriptor.applyTo(electricalLoad)
                 }

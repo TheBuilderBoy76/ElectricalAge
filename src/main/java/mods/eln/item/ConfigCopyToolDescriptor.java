@@ -12,6 +12,7 @@ import mods.eln.node.NodeBlock;
 import mods.eln.node.NodeManager;
 import mods.eln.sixnode.currentcable.CurrentCableDescriptor;
 import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor;
+import mods.eln.sixnode.electricalcable.UtilityCableDescriptor;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -48,8 +49,12 @@ public class ConfigCopyToolDescriptor extends GenericItemUsingDamageDescriptor {
             int type = compound.getInteger(name + "Type");
             GenericItemBlockUsingDamageDescriptor desc = Eln.sixNodeItem.getDescriptor(type);
 
+            // ElectricalCableDescriptor here covers utility cables
             if (desc instanceof ElectricalCableDescriptor) {
-                if (!(((ElectricalCableDescriptor) desc).signalWire && !acceptSignalCable)) {
+                if (desc instanceof UtilityCableDescriptor) {
+                    // TODO: NBT tag is not currently copied when transferring items, so this is temporarily disabled for utility cables. When the ability is added, remove this "if" check.
+                    return false;
+                } else if (!(((ElectricalCableDescriptor) desc).signalWire && !acceptSignalCable)) {
                     return readCableType(compound, inv, slot, invoker);
                 }
             } else if (desc instanceof CurrentCableDescriptor) {
@@ -73,6 +78,7 @@ public class ConfigCopyToolDescriptor extends GenericItemUsingDamageDescriptor {
             int type = compound.getInteger(name + "Type");
             ItemStack stackInSlot = inv.getStackInSlot(slot);
             if (stackInSlot != null) {
+                // ElectricalCableDescriptor here covers utility cables
                 GenericItemBlockUsingDamageDescriptor thisCableDesc = GenericItemBlockUsingDamageDescriptor.getDescriptor(stackInSlot, ElectricalCableDescriptor.class);
                 if (thisCableDesc == null) thisCableDesc = GenericItemBlockUsingDamageDescriptor.getDescriptor(stackInSlot, CurrentCableDescriptor.class);
                 if(thisCableDesc != null) {

@@ -95,6 +95,7 @@ public class LampSupplyRender extends SixNodeElementRender {
 
             ItemStack cableStack = Utils.unserialiseItemStack(stream);
             if (cableStack != null) {
+                // ElectricalCableDescriptor here covers utility cables
                 GenericCableDescriptor desc = (ElectricalCableDescriptor) GenericItemBlockUsingDamageDescriptor.getDescriptor(
                     cableStack, ElectricalCableDescriptor.class);
                 if (desc == null) desc = (CurrentCableDescriptor) GenericItemBlockUsingDamageDescriptor.getDescriptor(
