@@ -79,9 +79,9 @@ class LampSocketDescriptor(itemName: String, val renderType: ILampSocketObjRende
         super.addRealismContext(list)
         Collections.addAll(
             list,
-            *I18N.tr("Wireless mode of lights is intended \nto pretend wires are in the walls.").split(
-                "\n".toRegex()
-            ).dropLastWhile { it.isEmpty() }.toTypedArray())
+            *I18N.tr("Wireless mode of lights is intended \nto pretend wires are in the walls.")
+                .split("\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        )
         return RealisticEnum.REALISTIC
     }
 

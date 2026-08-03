@@ -46,6 +46,13 @@ import kotlin.math.pow
 class LampSocketElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: SixNodeDescriptor) :
     SixNodeElement(sixNode, side, sixNodeDescriptor), IConfigurable {
 
+    companion object {
+        var lastChannel = "Default channel"
+        var lastLampStack: ItemStack? = null
+        var lastCableStack: ItemStack? = null
+        var placingPlayerIsCreative = false
+    }
+
     override val inventory = SixNodeElementInventory(2, 64, this, LampSocketContainer.REQUIRED_CABLE_LENGTH)
 
     // ElectricalCableDescriptor here covers utility cables
@@ -130,7 +137,9 @@ class LampSocketElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
         }
 
         return if (takeItem) {
-            AutoAcceptInventoryProxy.creativeFreeInsert = Eln.config.getBooleanOrElse("gameplay.qol.creativeNoConsumeInsertedItems", false) && entityPlayer is EntityPlayerMP && isCreative(entityPlayer)
+            AutoAcceptInventoryProxy.creativeFreeInsert =
+                Eln.config.getBooleanOrElse("gameplay.qol.creativeNoConsumeInsertedItems", false) && (entityPlayer is EntityPlayerMP) && isCreative(entityPlayer)
+
             inventoryProxy.take(entityPlayer.currentEquippedItem, this, notifyInventoryChange = true).also { accepted ->
                 if (accepted && Eln.config.getBooleanOrElse("gameplay.qol.rememberLastLampSocketContents", false)) {
                     lastLampStack = inventory.getStackInSlot(LampSocketContainer.LAMP_SLOT_ID)?.copy()
@@ -189,13 +198,12 @@ class LampSocketElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
     }
 
     override fun initialize() {
-        computeInventory()
         if (Eln.config.getBooleanOrElse("gameplay.qol.rememberLastLampSocketContents", false) && placingPlayerIsCreative) {
             lastLampStack?.let { inventory.setInventorySlotContents(LampSocketContainer.LAMP_SLOT_ID, it.copy()) }
             lastCableStack?.let { inventory.setInventorySlotContents(LampSocketContainer.CABLE_SLOT_ID, it.copy()) }
-            computeInventory()
             placingPlayerIsCreative = false
         }
+        computeInventory()
     }
 
     override fun connectJob() {
@@ -379,8 +387,7 @@ class LampSocketElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
                 lastLampStack = inventory.getStackInSlot(LampSocketContainer.LAMP_SLOT_ID)?.copy()
                 lastCableStack = inventory.getStackInSlot(LampSocketContainer.CABLE_SLOT_ID)?.copy()
             }
-        }
-        else if (publishChanges) needPublish()
+        } else if (publishChanges) needPublish()
     }
 
     override fun writeConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
@@ -392,10 +399,4 @@ class LampSocketElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
         ConfigCopyToolDescriptor.writeCableType(compound, inventory.getStackInSlot(LampSocketContainer.CABLE_SLOT_ID))
     }
 
-    companion object {
-        var lastChannel = "Default channel"
-        var lastLampStack: ItemStack? = null
-        var lastCableStack: ItemStack? = null
-        var placingPlayerIsCreative = false
-    }
 }
