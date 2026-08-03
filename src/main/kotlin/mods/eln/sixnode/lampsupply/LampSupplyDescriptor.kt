@@ -78,9 +78,8 @@ class LampSupplyDescriptor(name: String, val obj: Obj3D, @JvmField val range: In
         list.add(I18N.tr("Capable of operating 3 light channels."))
         Collections.addAll(
             list,
-            *I18N.tr("Supports control from a wireless signal\nchannel for each lighting channel.").split(
-                "\n".toRegex()
-            ).dropLastWhile { it.isEmpty() }.toTypedArray()
+            *I18N.tr("Supports control from a wireless signal\nchannel for each lighting channel.")
+                .split("\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         )
     }
 

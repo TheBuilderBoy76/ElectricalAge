@@ -88,4 +88,5 @@ class LampSocketGui(player: EntityPlayer, val render: LampSocketRender) :
             trackbarRotationAngle -> render.clientSetDouble(ADJUST_ROTATION_ANGLE_EVENT, trackbarRotationAngle.value.toDouble())
         }
     }
+
 }
