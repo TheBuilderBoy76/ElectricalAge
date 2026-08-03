@@ -30,6 +30,7 @@ import net.minecraft.item.crafting.ShapelessRecipes
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.nbt.NBTTagList
 import net.minecraft.network.play.server.S3FPacketCustomPayload
+import net.minecraft.server.MinecraftServer
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.tileentity.TileEntityFurnace
 import net.minecraft.util.AxisAlignedBB
@@ -1263,9 +1264,14 @@ object Utils {
     @JvmStatic
     fun isPlayerUsingWrench(player: EntityPlayer?): Boolean {
         if (player == null) return false
-        if (ServerKeyHandler.get(ServerKeyHandler.WRENCH)) return true
+        if (ServerKeyHandler.get(ServerKeyHandler.WRENCH, player)) return true
         val stack = player.inventory.getCurrentItem() ?: return false
         return isWrench(stack)
+    }
+
+    @JvmStatic
+    fun isPlayerHoldingShift(player: EntityPlayer): Boolean {
+        return ServerKeyHandler.get(ServerKeyHandler.LSHIFT, player) || ServerKeyHandler.get(ServerKeyHandler.RSHIFT, player)
     }
 
     fun isClassLoaded(@Suppress("UNUSED_PARAMETER") name: String?): Boolean {
@@ -1359,5 +1365,22 @@ object Utils {
     @JvmStatic
     fun isWailaEasyModeEnabled(): Boolean {
         return Eln.config.getBooleanOrElse("ui.waila.easyMode", false)
+    }
+
+    /**
+     * Returns a list of all players in a world. Inspired by
+     * https://forums.minecraftforge.net/topic/5782-getting-a-world-object-and-player-list/.
+     */
+    @JvmStatic
+    fun getServerPlayerList(): List<EntityPlayerMP> {
+        val playerList = mutableListOf<EntityPlayerMP>()
+
+        MinecraftServer.getServer().worldServers.forEach { server ->
+            server.playerEntities.forEach { player ->
+                playerList.add(player as EntityPlayerMP)
+            }
+        }
+
+        return playerList
     }
 }

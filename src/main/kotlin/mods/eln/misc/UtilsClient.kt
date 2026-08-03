@@ -648,7 +648,7 @@ object UtilsClient {
 
     private fun List<String>.listLengthFormatter(@Suppress("UNUSED_PARAMETER") length: Int) {}
 
-    fun isShiftHeld(): Boolean {
+    private fun isShiftHeld(): Boolean {
         return Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT)
     }
 

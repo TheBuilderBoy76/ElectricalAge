@@ -6,6 +6,7 @@ import io.netty.channel.ChannelHandler.Sharable
 import mods.eln.client.ClientProxy
 import mods.eln.item.FalstadImportPacketHandler
 import mods.eln.misc.Coordinate
+import mods.eln.misc.Utils
 import mods.eln.misc.Utils.println
 import mods.eln.misc.Utils.sendPacketToClient
 import mods.eln.node.INodeEntity
@@ -171,11 +172,12 @@ class PacketHandler {
         }
     }
 
-    private fun packetPlayerKey(stream: DataInputStream, @Suppress("UNUSED_PARAMETER") manager: NetworkManager, @Suppress("UNUSED_PARAMETER") player: EntityPlayer?) {
+    private fun packetPlayerKey(stream: DataInputStream, @Suppress("UNUSED_PARAMETER") manager: NetworkManager, player: EntityPlayer) {
         try {
             val name = stream.readUTF()
             val state = stream.readBoolean()
-            ServerKeyHandler.set(name, state)
+            ServerKeyHandler.set(name, state, player)
+            Utils.println("Server received a client key event from player $player: $name is $state")
         } catch (e: IOException) {
             e.printStackTrace()
         }

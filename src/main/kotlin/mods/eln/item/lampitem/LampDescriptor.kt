@@ -3,9 +3,10 @@ package mods.eln.item.lampitem
 import mods.eln.i18n.I18N
 import mods.eln.item.GenericItemUsingDamageDescriptorUpgrade
 import mods.eln.misc.Utils
-import mods.eln.misc.UtilsClient
 import mods.eln.misc.VoltageLevelColor
 import mods.eln.sim.mna.component.Resistor
+import mods.eln.sixnode.lampsocket.LampSocketContainer
+import mods.eln.transparentnode.floodlight.FloodlightContainer
 import mods.eln.wiki.Data
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.Item
@@ -61,10 +62,11 @@ class LampDescriptor(name: String, iconName: String, val lampData: SpecificLampD
             return getLifeInTag(lampStack)
         }
 
-        // Lamp aging only occurs when the shift key is not held. This prevents the infamous NBT mismatch/desync bug
+        // If a player is holding shift while accessing the GUI of a lamp socket or floodlight, all light bulbs within
+        // that lamp socket/floodlight temporarily stop losing life. This prevents the infamous NBT mismatch/desync bug
         // from occurring, where an item is duplicated when shift-clicked from an inventory if its NBT tags differ
         // between the client and the server.
-        if (!lampData.technology.infiniteLifeEnabled && !UtilsClient.isShiftHeld()) {
+        if (!lampData.technology.infiniteLifeEnabled && !isContainerOpenAndPlayerHoldingShift()) {
             var lifeLost: Double
 
             if (abs(appliedVoltage) > lampData.nominalU) {
@@ -92,6 +94,26 @@ class LampDescriptor(name: String, iconName: String, val lampData: SpecificLampD
         } else {
             return currentLife
         }
+    }
+
+    /**
+     * Polls all players in a world and checks if this specific lamp item is within a lamp socket that a player is interacting with.
+     */
+    private fun isContainerOpenAndPlayerHoldingShift(): Boolean {
+        Utils.getServerPlayerList().forEach { player ->
+            val container = player.openContainer
+
+            if (container is LampSocketContainer || container is FloodlightContainer) {
+                for (idx in 0..<container.containerSize) {
+                    val lampStack = container.inventoryItemStacks[idx] as? ItemStack
+                    val lampDescriptor = Utils.getItemObject(lampStack) as? LampDescriptor
+
+                    if (this === lampDescriptor && Utils.isPlayerHoldingShift(player)) return true
+                }
+            }
+        }
+
+        return false
     }
 
     override fun addInformation(itemStack: ItemStack?, entityPlayer: EntityPlayer?, list: MutableList<String>, par4: Boolean) {
