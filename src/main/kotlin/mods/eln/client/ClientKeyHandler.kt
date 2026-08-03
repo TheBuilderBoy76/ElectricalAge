@@ -2,7 +2,7 @@ package mods.eln.client
 
 import cpw.mods.fml.client.registry.ClientRegistry
 import cpw.mods.fml.common.eventhandler.SubscribeEvent
-import cpw.mods.fml.common.gameevent.InputEvent.KeyInputEvent
+import cpw.mods.fml.common.gameevent.TickEvent.ClientTickEvent
 import mods.eln.Eln
 import mods.eln.ServerKeyHandler
 import mods.eln.misc.Utils
@@ -16,7 +16,14 @@ import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.io.IOException
 
-data class ElectricalAgeKey(var defaultKeybind: Int, val name: String, var lastState: Boolean = false, var binding: KeyBinding? = null)
+data class ElectricalAgeKey(
+    val defaultKeybind: Int,
+    val name: String,
+    var lastState: Boolean = false,
+    var binding: KeyBinding? = null,
+    val registerBinding: Boolean = true,
+    val activeOnGuiScreen: Boolean = false
+)
 
 object ClientKeyHandler {
     // These are the defaults, but they can be changed by the player after launching the game
@@ -25,13 +32,19 @@ object ClientKeyHandler {
 
     private val keyboardKeys = listOf(
         ElectricalAgeKey(DEFAULT_WRENCH_KEY, ServerKeyHandler.WRENCH),
-        ElectricalAgeKey(DEFAULT_WIKI_KEY, ServerKeyHandler.WIKI)
+        ElectricalAgeKey(DEFAULT_WIKI_KEY, ServerKeyHandler.WIKI),
+
+        // Shift keys do not need a keybind, since Minecraft hardcodes them for certain inventory operations
+        ElectricalAgeKey(Keyboard.KEY_LSHIFT, ServerKeyHandler.LSHIFT, registerBinding = false, activeOnGuiScreen = true),
+        ElectricalAgeKey(Keyboard.KEY_RSHIFT, ServerKeyHandler.RSHIFT, registerBinding = false, activeOnGuiScreen = true)
     )
 
     init {
         keyboardKeys.forEach {
-            it.binding = KeyBinding(it.name, it.defaultKeybind, StatCollector.translateToLocal("ElectricalAge"))
-            ClientRegistry.registerKeyBinding(it.binding)
+            if (it.registerBinding) {
+                it.binding = KeyBinding(it.name, it.defaultKeybind, StatCollector.translateToLocal("ElectricalAge"))
+                ClientRegistry.registerKeyBinding(it.binding)
+            }
         }
     }
 
@@ -55,10 +68,20 @@ object ClientKeyHandler {
         }
     }
 
+    /**
+     * This guarantees that client key events are fired even if a client has a GUI screen open (though this only works
+     * for GUI screens that do not pause the game).
+     */
     @SubscribeEvent
-    fun onKeyInput(@Suppress("UNUSED_PARAMETER") event: KeyInputEvent?) {
+    fun onClientTick(@Suppress("UNUSED_PARAMETER") event: ClientTickEvent) {
         keyboardKeys.forEach {
-            setState(it.name, it.binding?.isKeyPressed ?: return@forEach)
+            val state = if (it.registerBinding) {
+                if (it.activeOnGuiScreen) { Keyboard.isKeyDown(getKeybindValue(it.name)) }
+                else { it.binding?.isKeyPressed ?: return@forEach }
+            } else {
+                Keyboard.isKeyDown(it.defaultKeybind)
+            }
+            setState(it.name, state)
         }
     }
 
