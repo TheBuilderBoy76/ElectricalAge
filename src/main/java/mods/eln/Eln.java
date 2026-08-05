@@ -516,7 +516,7 @@ public class Eln {
         TR_GROUP("ElnMachines", "Electrical Age - Machines");
         TR_GROUP("ElnCreative", "Electrical Age - Creative");
         TR_GROUP("ElnOther", "Electrical Age - Other");
-        /* if (isDevelopmentRun()) */ Achievements.init();
+        if (isDevelopmentRun()) Achievements.init();
         FluidRegistrationKt.registerElnFluids();
         MinecraftForge.EVENT_BUS.register(new ElnForgeEventsHandler());
         MinecraftForge.EVENT_BUS.register(new RoomThermalBlockEventsHandler());
@@ -661,8 +661,13 @@ public class Eln {
         }
     }
 
-    // "Temporarily" disabling all usages of this function to allow for proper multiplayer testing.
     public boolean isDevelopmentRun() {
-        return (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
+        // This is used solely for testing purposes in multiplayer environments where it is necessary for an external
+        // client to join a server hosted by the IDE (i.e. at least two clients and one server are needed for testing).
+        // This flag should be temporarily set to TRUE before building the mod for a testing distribution.
+        boolean bypassDevEnvironmentCheck = false;
+
+        if (bypassDevEnvironmentCheck) return true;
+        else return (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
     }
 }

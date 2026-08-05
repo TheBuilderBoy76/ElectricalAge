@@ -130,7 +130,7 @@ object SixNodeRegistration {
         registerUtilityCables(34, 35, 36, 37)
         registerThermalCable(48)
         registerCurrentRelays(126)
-        /* if (Eln.instance.isDevelopmentRun) */ registerConduit(127)
+        if (Eln.instance.isDevelopmentRun) registerConduit(127)
         registerLampSocket(64)
         registerPowerSocket(67)
         registerLampSupply(65)
