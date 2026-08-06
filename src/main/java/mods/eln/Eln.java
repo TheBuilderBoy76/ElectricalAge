@@ -211,7 +211,6 @@ public class Eln {
     public static String simMetricsMqttServer = "";
     public static String simMetricsId = "server";
     public static int simMetricsPublishIntervalTicks = 20;
-    public static boolean debugEnabled = false;
     public static SiliconWafer siliconWafer;
     public static Transistor transistor;
     public static Thermistor thermistor;
