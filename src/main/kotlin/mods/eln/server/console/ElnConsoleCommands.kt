@@ -1,6 +1,7 @@
 package mods.eln.server.console
 
 import mods.eln.Eln
+import mods.eln.config.ServerConfigSyncHandler
 import mods.eln.environment.BiomeClimateService
 import mods.eln.gridnode.GridElement
 import mods.eln.gridnode.GridLink
@@ -153,6 +154,7 @@ class ElnConfigCommand : IConsoleCommand {
                             return
                         } else cprint(ics, "${FC.BRIGHT_GREEN}$path = $writtenValue", indent = 1)
                     }
+                    ServerConfigSyncHandler.syncClientConfig()
                     cprint(ics, "Changes saved to config/eln/eln.json.", indent = 1)
                 } catch (e: IllegalArgumentException) {
                     cprint(ics, "${FC.BRIGHT_RED}${e.message}", indent = 1)
@@ -1050,6 +1052,7 @@ class ElnDebugCommand: IConsoleCommand {
         if (args.size == 1) {
             val debug = getArgBool(ics, args[0])?: return
             saveConfigPath("debug.logging.enabled", debug)
+            ServerConfigSyncHandler.syncClientConfig()
             cprint(ics, "Debug mode: ${FC.DARK_GREEN}${boolToStr(debug)}", indent = 1)
         } else {
             cprint(ics, "This command only takes one argument - true or false")

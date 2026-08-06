@@ -26,7 +26,7 @@ object ServerKeyHandler {
     private val playerKeyStateList = mutableListOf<PlayerKeyState>()
 
     fun get(name: String, player: EntityPlayer): Boolean {
-        return playerKeyStateList.firstOrNull {it.player == player}?.keyStateList?.firstOrNull { it.name == name }?.state?: false
+        return playerKeyStateList.firstOrNull { it.player == player }?.keyStateList?.firstOrNull { it.name == name }?.state?: false
     }
 
     fun set(name: String, state: Boolean, player: EntityPlayer) {

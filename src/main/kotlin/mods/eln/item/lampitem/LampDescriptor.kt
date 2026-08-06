@@ -3,6 +3,7 @@ package mods.eln.item.lampitem
 import mods.eln.i18n.I18N
 import mods.eln.item.GenericItemUsingDamageDescriptorUpgrade
 import mods.eln.misc.Utils
+import mods.eln.misc.UtilsClient
 import mods.eln.misc.VoltageLevelColor
 import mods.eln.sim.mna.component.Resistor
 import mods.eln.sixnode.lampsocket.LampSocketContainer
@@ -126,7 +127,7 @@ class LampDescriptor(name: String, iconName: String, val lampData: SpecificLampD
         list.add(I18N.tr($$"Nominal lifetime: %1$h", lampData.technology.nominalLifeInHours))
 
         if (itemStack != null) {
-            if (Utils.isDebugEnabled()) list.add(I18N.tr($$"Current lifetime: %1$h", getLifeInTag(itemStack)))
+            if (UtilsClient.isServerDebugEnabled()) list.add(I18N.tr($$"Current lifetime: %1$h", getLifeInTag(itemStack)))
             list.add(I18N.tr("Condition: %1$", getLampCondition(itemStack)))
         }
     }

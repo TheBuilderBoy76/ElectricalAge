@@ -375,6 +375,13 @@ object Utils {
     }
 
     @JvmStatic
+    fun sendPacketToAllClients(bos: ByteArrayOutputStream) {
+        getServerPlayerList().forEach { player ->
+            sendPacketToClient(bos, player)
+        }
+    }
+
+    @JvmStatic
     fun setGlColorFromDye(damage: Int) {
         setGlColorFromDye(damage, 1.0f)
     }
