@@ -6,6 +6,7 @@ import mods.eln.Eln
 import mods.eln.GuiHandler
 import mods.eln.ServerKeyHandler
 import mods.eln.client.ClientKeyHandler
+import mods.eln.config.ClientConfigSyncHandler
 import mods.eln.i18n.I18N.tr
 import mods.eln.misc.Obj3D.Obj3DPart
 import mods.eln.node.six.SixNodeEntity
@@ -620,10 +621,10 @@ object UtilsClient {
         if (realisticEnum != null)
             dst.add("§r${realisticEnum.color}${realisticEnum.name}§r")
         if (details.isNotEmpty()) {
-            if (isShiftHeld() || (Utils.isDebugEnabled() && isWrenchKeyHeld())) {
+            if (isShiftHeld() || (isServerDebugEnabled() && isWrenchKeyHeld())) {
                 dst.addAll(details)
             } else {
-                if (Utils.isDebugEnabled()) {
+                if (isServerDebugEnabled()) {
                     dst.add("§F§o${tr("Hold [shift] or [%1$] for details", ClientKeyHandler.getKeybindKey(ServerKeyHandler.WRENCH))}")
                 } else {
                     dst.add("§F§o${tr("Hold [shift] for details")}")
@@ -631,15 +632,13 @@ object UtilsClient {
             }
         }
         if (realismDetails.isNotEmpty()) {
-            if (isControlHeld() || (Utils.isDebugEnabled() && isWrenchKeyHeld())) {
+            if (isControlHeld() || (isServerDebugEnabled() && isWrenchKeyHeld())) {
                 dst.addAll(realismDetails)
-            } else {
-                if (realisticEnum != null && realismDetails.isNotEmpty()) {
-                    if (Utils.isDebugEnabled()) {
-                        dst.add("§F§o${tr("Hold [ctrl] or [%1$] for realism details", ClientKeyHandler.getKeybindKey(ServerKeyHandler.WRENCH))}")
-                    } else {
-                        dst.add("§F§o${tr("Hold [ctrl] for realism details")}")
-                    }
+            } else if (realisticEnum != null && realismDetails.isNotEmpty()) {
+                if (isServerDebugEnabled()) {
+                    dst.add("§F§o${tr("Hold [ctrl] or [%1$] for realism details", ClientKeyHandler.getKeybindKey(ServerKeyHandler.WRENCH))}")
+                } else {
+                    dst.add("§F§o${tr("Hold [ctrl] for realism details")}")
                 }
             }
         }
@@ -668,5 +667,15 @@ object UtilsClient {
     fun getWeather(world: World): Double {
         if (world.isThundering) return 1.0
         return if (world.isRaining) 0.5 else 0.0
+    }
+
+    /**
+     * This should be used for rendering tasks (such as displaying item tooltips) where it is necessary for the client
+     * to display server-side information without the client actually enabling debug mode (think `wailaEasyMode`-type
+     * behavior).
+     */
+    @JvmStatic
+    fun isServerDebugEnabled(): Boolean {
+        return ClientConfigSyncHandler.getSyncedConfigEntry("debug.logging.enabled") as? Boolean ?: false
     }
 }

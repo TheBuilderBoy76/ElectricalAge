@@ -19,6 +19,7 @@ import mods.eln.cable.CableRenderDescriptor;
 import mods.eln.client.ClientKeyHandler;
 import mods.eln.client.SoundLoader;
 import mods.eln.config.JsonConfig;
+import mods.eln.config.ServerConfigSyncHandler;
 import mods.eln.craft.CraftingRecipes;
 import mods.eln.entity.ReplicatorPopProcess;
 import mods.eln.environment.BiomeClimateService;
@@ -144,6 +145,7 @@ public class Eln {
     public static final byte packetClientToServerConnection = 21;
     public static final byte packetServerToClientInfo = 22;
     public static final byte packetFalstadImport = 23;
+    public static final byte packetServerConfigSync = 24;
     public static final Obj3DFolder obj = new Obj3DFolder();
     public static final double gateInputCurrent = 0.00005;
     public static final double gateOutputCurrent = 0.100;
@@ -522,6 +524,7 @@ public class Eln {
         MinecraftForge.EVENT_BUS.register(new RoomThermalBlockEventsHandler());
         MinecraftForge.EVENT_BUS.register(new ElectricMinecartChargeReporter());
         FMLCommonHandler.instance().bus().register(new ElnFMLEventsHandler());
+        FMLCommonHandler.instance().bus().register(ServerConfigSyncHandler.INSTANCE);
         MinecraftForge.EVENT_BUS.register(this);
         FMLInterModComms.sendMessage("Waila", "register", "mods.eln.integration.waila.WailaIntegration" +
                 ".callbackRegister");
