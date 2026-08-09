@@ -16,7 +16,6 @@ import mods.eln.block.ArcClayItemBlock;
 import mods.eln.block.ArcMetalBlock;
 import mods.eln.block.ArcMetalItemBlock;
 import mods.eln.cable.CableRenderDescriptor;
-import mods.eln.client.ClientKeyHandler;
 import mods.eln.client.SoundLoader;
 import mods.eln.config.JsonConfig;
 import mods.eln.config.ServerConfigSyncHandler;
@@ -167,7 +166,6 @@ public class Eln {
     public static SimpleNetworkWrapper elnNetwork;
     public static PacketHandler packetHandler;
     public static LiveDataManager clientLiveDataManager;
-    public static ClientKeyHandler clientKeyHandler;
     public static SaveConfig saveConfig;
     public static GhostManager ghostManager;
     public static GhostManagerNbt ghostManagerNbt;

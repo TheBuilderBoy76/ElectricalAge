@@ -85,7 +85,7 @@ object ClientKeyHandler {
         }
     }
 
-    fun setState(name: String, state: Boolean) {
+    private fun setState(name: String, state: Boolean) {
         val entry = keyboardKeys.firstOrNull { it.name == name }?: return
         if (entry.lastState != state) {
             entry.lastState = state // Be sure to set the state so that it calls again when key released
