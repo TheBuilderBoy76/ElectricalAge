@@ -554,7 +554,7 @@ public class Eln {
         serverEventListener.clear();
         nodeServer.stop();
         simulator.stop();
-        LampSupplyElement.channelMap.clear();
+        LampSupplyElement.globalChannelMap.clear();
         WirelessSignalTxElement.channelMap.clear();
         MqttManager.shutdown();
         MetricsSubsystem.shutdown();
@@ -566,7 +566,7 @@ public class Eln {
         TeleporterElement.teleporterList.clear();
         LightBlockEntity.observers.clear();
         WirelessSignalTxElement.channelMap.clear();
-        LampSupplyElement.channelMap.clear();
+        LampSupplyElement.globalChannelMap.clear();
         clientLiveDataManager.start();
         simulator.init();
         simulator.addSlowProcess(wind = new WindProcess());

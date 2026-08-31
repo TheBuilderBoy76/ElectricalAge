@@ -23,11 +23,11 @@ class LampSupplyRender(tileEntity: SixNodeEntity, side: Direction, sixNodeDescri
     private val coordinate = Coordinate(tileEntity)
     private val interpolator = PhysicalInterpolator(0.4f, 8.0f, 0.9f, 0.2f)
 
-    val entries: MutableList<LampSupplyElement.Entry> = mutableListOf()
+    val localEntries: MutableList<LampSupplyElement.LocalLampSupplyEntry> = mutableListOf()
 
     init {
         for (idx in 0..<LampSupplyDescriptor.CHANNEL_COUNT) {
-            entries.add(LampSupplyElement.Entry("", "", 2))
+            localEntries.add(LampSupplyElement.LocalLampSupplyEntry("", "", 2))
         }
     }
 
@@ -65,10 +65,10 @@ class LampSupplyRender(tileEntity: SixNodeEntity, side: Direction, sixNodeDescri
         super.publishUnserialize(stream)
 
         try {
-            for (e in entries) {
-                e.powerChannel = stream.readUTF()
-                e.wirelessChannel = stream.readUTF()
-                e.aggregator = stream.readInt()
+            for (entry in localEntries) {
+                entry.powerChannel = stream.readUTF()
+                entry.wirelessChannel = stream.readUTF()
+                entry.aggregator = stream.readInt()
             }
             val cableStack = Utils.unserialiseItemStack(stream)
             cableRender = (Utils.getItemObject(cableStack) as? GenericCableDescriptor)?.render

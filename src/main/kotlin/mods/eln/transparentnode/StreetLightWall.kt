@@ -14,6 +14,7 @@ import org.lwjgl.opengl.GL11
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
+import kotlin.collections.contains
 
 class StreetLightWallDescriptor(val name: String, val obj: Obj3D): TransparentNodeDescriptor(name, StreetLightWallElement::class.java, StreetLightWallRender::class.java) {
     private var fixture: Obj3D.Obj3DPart? = null
@@ -97,29 +98,24 @@ class StreetLightWallElement(node: TransparentNode, descriptor: TransparentNodeD
     }
 
     class StreetLightWallElementProcess(val elem: StreetLightWallElement): IProcess {
-        var bestChannelHandle: Pair<Double, LampSupplyElement.PowerSupplyChannelHandle>? = null
+        private var cachedBestChannelHandle: Pair<Double, LampSupplyElement.PowerSupplyChannelHandle>? = null
 
-        private fun findBestSupply(here: Coordinate, forceUpdate: Boolean = false): Pair<Double, LampSupplyElement.PowerSupplyChannelHandle>? {
-            val chanMap = LampSupplyElement.channelMap[elem.powerChannel] ?: return null
-            val bestChanHand = bestChannelHandle
-            // Here's our cached value. We just check if it's null and if it's still a thing.
-            if (!(bestChanHand == null || forceUpdate || !chanMap.contains(bestChanHand.second))) {
-                return bestChanHand // we good!
-            }
-            val list = LampSupplyElement.channelMap[elem.powerChannel]?.filterNotNull() ?: return null
-            val map = list.map { Pair(it.element.sixNode!!.coordinate.trueDistanceTo(here), it) }
-            val sortedBy = map.sortedBy { it.first }
-            val chanHand = sortedBy.first()
-            bestChannelHandle = chanHand
-            return bestChannelHandle
+        private fun findBestLampSupply(coordinate: Coordinate, forceUpdate: Boolean = false) {
+            val channelMap = LampSupplyElement.globalChannelMap[elem.powerChannel]
+
+            cachedBestChannelHandle = if (channelMap != null) {
+                if (channelMap.contains(cachedBestChannelHandle?.second) && !forceUpdate) return
+                else channelMap.map { Pair(it.element.sixNode!!.coordinate.trueDistanceTo(coordinate), it) }
+                    .filter { it.first < it.second.element.range }.minByOrNull { it.first }
+            } else null
         }
 
         override fun process(time: Double) {
-            val lampSupplyList = findBestSupply(elem.node!!.coordinate)
-            val best = lampSupplyList?.second
+            findBestLampSupply(elem.node!!.coordinate, LampSupplyElement.forceCachedLampSupplyUpdate)
+            val best = cachedBestChannelHandle?.second
             if (best != null && best.element.getChannelState(best.id)) {
-                best.element.addToRp(elem.loadResistor.resistance)
-                elem.electricalLoad.state = best.element.powerLoad.state
+                best.element.addToConductance(elem.loadResistor.resistance)
+                elem.electricalLoad.state = best.element.electricalLoad.state
             } else {
                 elem.electricalLoad.state = 0.0
             }

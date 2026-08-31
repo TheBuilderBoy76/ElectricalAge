@@ -14,11 +14,11 @@ import java.io.DataOutputStream
 import java.io.IOException
 import kotlin.math.abs
 
-class LampSocketProcess(var element: LampSocketElement) : IProcess {
+class LampSocketProcess(val element: LampSocketElement) : IProcess {
 
-    var cachedBestChannelHandle: Pair<Double, LampSupplyElement.PowerSupplyChannelHandle>? = null
+    private var cachedBestChannelHandle: Pair<Double, LampSupplyElement.PowerSupplyChannelHandle>? = null
     var stableLightProbability = 0.0
-    var fastLightValue = 0
+    private var fastLightValue = 0
 
     private var lampInInventory = false
     private var cableInInventory = false
@@ -34,13 +34,13 @@ class LampSocketProcess(var element: LampSocketElement) : IProcess {
             val lampDescriptor = Utils.getItemObject(lampStack) as LampDescriptor
 
             if (element.poweredByLampSupply) {
-                findBestLampSupply(element.sixNode!!.coordinate)
+                findBestLampSupply(element.sixNode!!.coordinate, LampSupplyElement.forceCachedLampSupplyUpdate)
 
                 val bestLampSupply = cachedBestChannelHandle?.second
 
                 if (bestLampSupply != null && bestLampSupply.element.getChannelState(bestLampSupply.id)) {
-                    bestLampSupply.element.addToRp(lampDescriptor.lampData.resistance)
-                    element.electricalLoad.state = bestLampSupply.element.powerLoad.state
+                    bestLampSupply.element.addToConductance(lampDescriptor.lampData.resistance)
+                    element.electricalLoad.state = bestLampSupply.element.electricalLoad.state
                 } else {
                     element.electricalLoad.state = 0.0
                 }
@@ -99,18 +99,13 @@ class LampSocketProcess(var element: LampSocketElement) : IProcess {
     }
 
     private fun findBestLampSupply(coordinate: Coordinate, forceUpdate: Boolean = false) {
-        val channelMap = LampSupplyElement.channelMap[element.lampSupplyChannel]
+        val channelMap = LampSupplyElement.globalChannelMap[element.lampSupplyChannel]
 
-        if (channelMap != null) {
+        cachedBestChannelHandle = if (channelMap != null) {
             if (channelMap.contains(cachedBestChannelHandle?.second) && !forceUpdate) return
-            else {
-                channelMap.filterNotNull()
-                cachedBestChannelHandle = channelMap
-                    .map { Pair(it.element.sixNode!!.coordinate.trueDistanceTo(coordinate), it) }
-                    .filter { it.first < it.second.element.range }
-                    .minByOrNull { it.first }
-            }
-        } else cachedBestChannelHandle = null
+            else channelMap.map { Pair(it.element.sixNode!!.coordinate.trueDistanceTo(coordinate), it) }
+                .filter { it.first < it.second.element.range }.minByOrNull { it.first }
+        } else null
     }
 
     private fun updateNearbyBlocks(growRate: Double, nominalLight: Int, actualLight: Int, deltaT: Double) {

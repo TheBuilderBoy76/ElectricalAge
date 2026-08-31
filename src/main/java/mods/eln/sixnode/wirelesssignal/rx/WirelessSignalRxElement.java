@@ -17,7 +17,7 @@ import mods.eln.sim.nbt.NbtElectricalGateOutputProcess;
 import mods.eln.sixnode.wirelesssignal.aggregator.BiggerAggregator;
 import mods.eln.sixnode.wirelesssignal.aggregator.IWirelessSignalAggregator;
 import mods.eln.sixnode.wirelesssignal.aggregator.SmallerAggregator;
-import mods.eln.sixnode.wirelesssignal.aggregator.ToogleAggregator;
+import mods.eln.sixnode.wirelesssignal.aggregator.ToggleAggregator;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -41,7 +41,7 @@ public class WirelessSignalRxElement extends SixNodeElement implements IConfigur
 
     WirelessSignalRxDescriptor descriptor;
 
-    ToogleAggregator toogleAggregator;
+    ToggleAggregator toggleAggregator;
 
     boolean connection = false;
 
@@ -63,7 +63,7 @@ public class WirelessSignalRxElement extends SixNodeElement implements IConfigur
         aggregators = new IWirelessSignalAggregator[3];
         aggregators[0] = new BiggerAggregator();
         aggregators[1] = new SmallerAggregator();
-        aggregators[2] = toogleAggregator = new ToogleAggregator();
+        aggregators[2] = toggleAggregator = new ToggleAggregator();
     }
 
     @Override
@@ -121,7 +121,7 @@ public class WirelessSignalRxElement extends SixNodeElement implements IConfigur
         nbt.setString("channel", channel);
         nbt.setBoolean("connection", connection);
         nbt.setInteger("selectedAggregator", selectedAggregator);
-        toogleAggregator.writeToNBT(nbt, "toogleAggregator");
+        toggleAggregator.writeToNBT(nbt, "toogleAggregator");
     }
 
     @Override
@@ -130,7 +130,7 @@ public class WirelessSignalRxElement extends SixNodeElement implements IConfigur
         channel = nbt.getString("channel");
         connection = nbt.getBoolean("connection");
         selectedAggregator = nbt.getInteger("selectedAggregator");
-        toogleAggregator.readFromNBT(nbt, "toogleAggregator");
+        toggleAggregator.readFromNBT(nbt, "toogleAggregator");
     }
 
     @Override

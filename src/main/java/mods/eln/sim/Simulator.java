@@ -12,6 +12,7 @@ import mods.eln.sim.mna.RootSystem;
 import mods.eln.sim.mna.component.Component;
 import mods.eln.sim.mna.state.State;
 import mods.eln.sim.process.destruct.IDestructible;
+import mods.eln.sixnode.lampsupply.LampSupplyElement;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -52,6 +53,7 @@ public class Simulator /* ,IPacketHandler */ {
 
     private int printTimeCounter = 0;
     private int resetLampLifeTimeoutCounter = 0;
+    private int forceCachedLampSupplyUpdate = 0;
 
     public ArrayList<IProcess> getElectricalProcessList() {
         return electricalProcessList;
@@ -482,6 +484,14 @@ public class Simulator /* ,IPacketHandler */ {
                 LampLists.INSTANCE.setResetLampLifeFlag(false);
                 Utils.println("Reset all lamp lives to nominal.");
                 resetLampLifeTimeoutCounter = 0;
+            }
+        }
+
+        if (LampSupplyElement.Companion.getForceCachedLampSupplyUpdate()) {
+            if (++forceCachedLampSupplyUpdate == 2) { // Keep the flag enabled for a minimum of one tick
+                LampSupplyElement.Companion.setForceCachedLampSupplyUpdate(false);
+                Utils.println("Reset cached best lamp supply for all lamp sockets.");
+                forceCachedLampSupplyUpdate = 0;
             }
         }
 

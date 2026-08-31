@@ -13,6 +13,9 @@ import static mods.eln.i18n.I18N.tr;
 
 public class LampSupplyGui extends GuiContainerEln {
 
+    public static final byte SET_POWER_NAME_EVENT = 0;
+    public static final byte SET_WIRELESS_NAME_EVENT = 1;
+    public static final byte SET_SELECTED_AGGREGATOR_EVENT = 2;
 
     private LampSupplyRender render;
 
@@ -42,9 +45,9 @@ public class LampSupplyGui extends GuiContainerEln {
 
                 render.preparePacketForServer(stream);
 
-                stream.writeByte(LampSupplyElement.setSelectedAggregator);
-                stream.writeByte(channel);
-                stream.writeByte(id);
+                stream.writeByte(SET_SELECTED_AGGREGATOR_EVENT);
+                stream.writeInt(channel);
+                stream.writeInt(id);
 
                 render.sendPacketToServer(bos);
             } catch (IOException e) {
@@ -56,7 +59,7 @@ public class LampSupplyGui extends GuiContainerEln {
 
         @Override
         public void idraw(int x, int y, float f) {
-            this.enabled = render.getEntries().get(channel).aggregator != id;
+            this.enabled = render.getLocalEntries().get(channel).aggregator != id;
             super.idraw(x, y, f);
         }
     }
@@ -70,7 +73,7 @@ public class LampSupplyGui extends GuiContainerEln {
         for (int id = 0; id < LampSupplyDescriptor.CHANNEL_COUNT; id++) {
             x = 6;
 
-            LampSupplyElement.Entry e = render.getEntries().get(id);
+            LampSupplyElement.LocalLampSupplyEntry e = render.getLocalEntries().get(id);
             GuiTextFieldEln powerChannel = newGuiTextField(x, y, 101);
             x += powerChannel.getWidth() + 12;
             powerChannel.setText(e.powerChannel);
@@ -125,8 +128,8 @@ public class LampSupplyGui extends GuiContainerEln {
                 DataOutputStream stream = new DataOutputStream(bos);
 
                 render.preparePacketForServer(stream);
-                stream.writeByte(LampSupplyElement.setPowerName);
-                stream.writeByte(powerMap.get(object));
+                stream.writeByte(SET_POWER_NAME_EVENT);
+                stream.writeInt(powerMap.get(object));
                 stream.writeUTF(((GuiTextFieldEln) object).getText());
 
                 render.sendPacketToServer(bos);
@@ -142,8 +145,8 @@ public class LampSupplyGui extends GuiContainerEln {
                 DataOutputStream stream = new DataOutputStream(bos);
 
                 render.preparePacketForServer(stream);
-                stream.writeByte(LampSupplyElement.setWirelessName);
-                stream.writeByte(wirelessMap.get(object));
+                stream.writeByte(SET_WIRELESS_NAME_EVENT);
+                stream.writeInt(wirelessMap.get(object));
                 stream.writeUTF(((GuiTextFieldEln) object).getText());
 
                 render.sendPacketToServer(bos);

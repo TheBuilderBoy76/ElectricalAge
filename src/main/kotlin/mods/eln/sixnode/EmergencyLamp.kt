@@ -109,24 +109,28 @@ class EmergencyLampElement(sixNode: SixNode, side: Direction, descriptor: SixNod
     var channel by published("Default channel")
     var isConnectedToLampSupply by published(false)
 
+    private var cachedBestChannelHandle: Pair<Double, LampSupplyElement.PowerSupplyChannelHandle>? = null
+
+    private fun findBestLampSupply(coordinate: Coordinate, forceUpdate: Boolean = false) {
+        val channelMap = LampSupplyElement.globalChannelMap[channel]
+
+        cachedBestChannelHandle = if (channelMap != null) {
+            if (channelMap.contains(cachedBestChannelHandle?.second) && !forceUpdate) return
+            else channelMap.map { Pair(it.element.sixNode!!.coordinate.trueDistanceTo(coordinate), it) }
+                .filter { it.first < it.second.element.range }.minByOrNull { it.first }
+        } else null
+    }
+
     val process = IProcess { deltaT ->
         if (!poweredByCable) {
-            var closestPowerSupply: LampSupplyElement.PowerSupplyChannelHandle? = null
-            var closestDistance = 10000f
-
-            LampSupplyElement.channelMap[channel]?.forEach {
-                val distance = it.element.sixNode!!.coordinate.trueDistanceTo(sixNode.coordinate).toFloat()
-                if (distance < closestDistance && distance <= it.element.range) {
-                    closestDistance = distance
-                    closestPowerSupply = it
-                }
-            }
+            findBestLampSupply(coordinate!!, LampSupplyElement.forceCachedLampSupplyUpdate)
+            val closestPowerSupply = cachedBestChannelHandle?.second
 
             if (closestPowerSupply != null) {
                 isConnectedToLampSupply = true
-                if (closestPowerSupply!!.element.getChannelState(closestPowerSupply!!.id)) {
-                    closestPowerSupply!!.element.addToRp(chargingResistor.resistance)
-                    load.state = closestPowerSupply!!.element.powerLoad.state
+                if (closestPowerSupply.element.getChannelState(closestPowerSupply.id)) {
+                    closestPowerSupply.element.addToConductance(chargingResistor.resistance)
+                    load.state = closestPowerSupply.element.electricalLoad.state
                 } else {
                     load.state = 0.0
                 }

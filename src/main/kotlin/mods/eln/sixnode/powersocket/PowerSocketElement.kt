@@ -3,6 +3,7 @@ package mods.eln.sixnode.powersocket
 import mods.eln.generic.GenericItemUsingDamageDescriptor.Companion.getDescriptor
 import mods.eln.item.BrushDescriptor
 import mods.eln.item.IConfigurable
+import mods.eln.misc.Coordinate
 import mods.eln.misc.Direction
 import mods.eln.misc.LRDU
 import mods.eln.misc.Utils.plotUIP
@@ -18,7 +19,6 @@ import mods.eln.sim.nbt.NbtElectricalLoad
 import mods.eln.sim.process.destruct.VoltageStateWatchDog
 import mods.eln.sim.process.destruct.WorldExplosion
 import mods.eln.sixnode.lampsupply.LampSupplyElement
-import mods.eln.sixnode.lampsupply.LampSupplyElement.PowerSupplyChannelHandle
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.nbt.NBTTagList
@@ -50,24 +50,25 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
     }
 
     internal inner class PowerSocketSlowProcess : IProcess {
+        private var cachedBestChannelHandle: Pair<Double, LampSupplyElement.PowerSupplyChannelHandle>? = null
+
+        private fun findBestLampSupply(coordinate: Coordinate, forceUpdate: Boolean = false) {
+            val channelMap = LampSupplyElement.globalChannelMap[channel]
+
+            cachedBestChannelHandle = if (channelMap != null) {
+                if (channelMap.contains(cachedBestChannelHandle?.second) && !forceUpdate) return
+                else channelMap.map { Pair(it.element.sixNode!!.coordinate.trueDistanceTo(coordinate), it) }
+                    .filter { it.first < it.second.element.range }.minByOrNull { it.first }
+            } else null
+        }
+
         override fun process(time: Double) {
-            val local = sixNode!!.coordinate
-            var handle: PowerSupplyChannelHandle? = null
-            var bestDist = 1e9f
-            val handles: List<PowerSupplyChannelHandle>? = LampSupplyElement.channelMap[channel]
-            if (handles != null) {
-                for (hdl in handles) {
-                    val dist = hdl.element.sixNode!!.coordinate.trueDistanceTo(local).toFloat()
-                    if (dist < bestDist && dist <= hdl.element.range) {
-                        bestDist = dist
-                        handle = hdl
-                    }
-                }
-            }
+            findBestLampSupply(coordinate!!, LampSupplyElement.forceCachedLampSupplyUpdate)
+            val handle = cachedBestChannelHandle?.second
             loadResistor.breakConnection()
             loadResistor.highImpedance()
             if (handle != null && handle.element.getChannelState(handle.id)) {
-                loadResistor.connectTo(handle.element.powerLoad, outputLoad)
+                loadResistor.connectTo(handle.element.electricalLoad, outputLoad)
                 loadResistor.resistance = 0.1
             }
         }
