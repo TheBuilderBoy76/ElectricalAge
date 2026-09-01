@@ -58,7 +58,7 @@ class LampSupplyRender(tileEntity: SixNodeEntity, side: Direction, sixNodeDescri
     }
 
     override fun newGuiDraw(side: Direction, player: EntityPlayer): GuiScreen {
-        return LampSupplyGui(this, player, inventory)
+        return LampSupplyGui(player, this)
     }
 
     override fun publishUnserialize(stream: DataInputStream) {

@@ -11,7 +11,7 @@ import net.minecraft.item.ItemStack
 import net.minecraftforge.client.IItemRenderer
 import java.util.*
 
-class LampSupplyDescriptor(name: String, val obj: Obj3D, @JvmField val range: Int, val nominalVoltage: Double) :
+class LampSupplyDescriptor(name: String, val obj: Obj3D, val range: Int, val nominalVoltage: Double) :
     SixNodeDescriptor(name, LampSupplyElement::class.java, LampSupplyRender::class.java) {
 
     private val base = obj.getPart("base")

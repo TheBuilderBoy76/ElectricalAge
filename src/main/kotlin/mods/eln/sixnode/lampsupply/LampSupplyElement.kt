@@ -62,7 +62,7 @@ class LampSupplyElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
         }
     }
 
-    data class LocalLampSupplyEntry(@JvmField var powerChannel: String, @JvmField var wirelessChannel: String, @JvmField var aggregator: Int)
+    data class LocalLampSupplyEntry(var powerChannel: String, var wirelessChannel: String, var aggregator: Int)
 
     companion object {
         @JvmField
