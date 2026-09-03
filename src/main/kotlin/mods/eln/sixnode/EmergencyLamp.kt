@@ -16,7 +16,9 @@ import mods.eln.sim.nbt.NbtElectricalLoad
 import mods.eln.sim.process.destruct.VoltageStateWatchDog
 import mods.eln.sim.process.destruct.WorldExplosion
 import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor
-import mods.eln.sixnode.lampsupply.LampSupplyElement
+import mods.eln.sixnode.lampsupply.AvailableSupply
+import mods.eln.sixnode.lampsupply.IWirelessPower
+import mods.eln.sixnode.lampsupply.LampSupplyConnectionHelper
 import net.minecraft.client.gui.GuiButton
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
@@ -109,56 +111,7 @@ class EmergencyLampElement(sixNode: SixNode, side: Direction, descriptor: SixNod
     var channel by published("Default channel")
     var isConnectedToLampSupply by published(false)
 
-    private var cachedBestChannelHandle: Pair<Double, LampSupplyElement.PowerSupplyChannelHandle>? = null
-
-    private fun findBestLampSupply(coordinate: Coordinate, forceUpdate: Boolean = false) {
-        val channelMap = LampSupplyElement.globalChannelMap[channel]
-
-        cachedBestChannelHandle = if (channelMap != null) {
-            if (channelMap.contains(cachedBestChannelHandle?.second) && !forceUpdate) return
-            else channelMap.map { Pair(it.element.sixNode!!.coordinate.trueDistanceTo(coordinate), it) }
-                .filter { it.first < it.second.element.range }.minByOrNull { it.first }
-        } else null
-    }
-
-    val process = IProcess { deltaT ->
-        if (!poweredByCable) {
-            findBestLampSupply(coordinate!!, LampSupplyElement.forceCachedLampSupplyUpdate)
-            val closestPowerSupply = cachedBestChannelHandle?.second
-
-            if (closestPowerSupply != null) {
-                isConnectedToLampSupply = true
-                if (closestPowerSupply.element.getChannelState(closestPowerSupply.id)) {
-                    closestPowerSupply.element.addToConductance(chargingResistor.resistance)
-                    load.state = closestPowerSupply.element.electricalLoad.state
-                } else {
-                    load.state = 0.0
-                }
-            } else {
-                isConnectedToLampSupply = false
-                load.state = 0.0
-            }
-        }
-
-        if (chargingResistor.voltage > 0.5 * desc.nominalVoltage) {
-            on = false
-            if (charge < desc.batteryCapacity) {
-                // Use setter to update resistance along with the state.
-                chargingResistor.setState(true)
-                charge = Math.min(charge + chargingResistor.power * deltaT, desc.batteryCapacity)
-            } else {
-                chargingResistor.setState(false)
-            }
-        } else {
-            chargingResistor.setState(false)
-            if (charge > 0) {
-                on = true
-                charge = Math.max(charge - desc.consumption * deltaT, 0.0)
-            } else {
-                on = false
-            }
-        }
-    }
+    val process = EmergencyLampProcess(this)
 
     override fun initialize() {
         chargingResistor.resistance =
@@ -231,6 +184,46 @@ class EmergencyLampElement(sixNode: SixNode, side: Direction, descriptor: SixNod
     }
 
     override fun hasGui() = true
+}
+
+class EmergencyLampProcess(val element: EmergencyLampElement) : IProcess, IWirelessPower {
+    override var previousConnectedSupply: AvailableSupply? = null
+
+    override val powerChannel: String
+        get() = element.channel
+    override val coordinate: Coordinate
+        get() = element.coordinate!!
+    override val loadResistance: Double
+        get() = element.chargingResistor.resistance
+
+    override fun updateLoadState(newState: Double) {
+        element.load.state = newState
+    }
+
+    override fun process(time: Double) {
+        if (!element.poweredByCable) {
+            element.isConnectedToLampSupply = LampSupplyConnectionHelper.connectToLampSupply(this)
+        }
+
+        if (element.chargingResistor.voltage > 0.5 * element.desc.nominalVoltage) {
+            element.on = false
+            if (element.charge < element.desc.batteryCapacity) {
+                // Use setter to update resistance along with the state.
+                element.chargingResistor.setState(true)
+                element.charge = minOf(element.charge + element.chargingResistor.power * time, element.desc.batteryCapacity)
+            } else {
+                element.chargingResistor.setState(false)
+            }
+        } else {
+            element.chargingResistor.setState(false)
+            if (element.charge > 0) {
+                element.on = true
+                element.charge = maxOf(element.charge - element.desc.consumption * time, 0.0)
+            } else {
+                element.on = false
+            }
+        }
+    }
 }
 
 class EmergencyLampRender(entity: SixNodeEntity, side: Direction, descriptor: SixNodeDescriptor)

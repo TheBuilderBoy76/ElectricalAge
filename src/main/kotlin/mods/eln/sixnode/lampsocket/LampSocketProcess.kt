@@ -6,7 +6,9 @@ import mods.eln.lightblock.LightBlockEntity
 import mods.eln.misc.Coordinate
 import mods.eln.misc.Utils
 import mods.eln.sim.IProcess
-import mods.eln.sixnode.lampsupply.LampSupplyElement
+import mods.eln.sixnode.lampsupply.AvailableSupply
+import mods.eln.sixnode.lampsupply.IWirelessPower
+import mods.eln.sixnode.lampsupply.LampSupplyConnectionHelper
 import net.minecraft.item.ItemStack
 import net.minecraft.util.Vec3
 import java.io.ByteArrayOutputStream
@@ -14,14 +16,26 @@ import java.io.DataOutputStream
 import java.io.IOException
 import kotlin.math.abs
 
-class LampSocketProcess(val element: LampSocketElement) : IProcess {
+class LampSocketProcess(val element: LampSocketElement) : IProcess, IWirelessPower {
 
-    private var cachedBestChannelHandle: Pair<Double, LampSupplyElement.PowerSupplyChannelHandle>? = null
     var stableLightProbability = 0.0
     private var fastLightValue = 0
 
     private var lampInInventory = false
     private var cableInInventory = false
+
+    override var previousConnectedSupply: AvailableSupply? = null
+
+    override val powerChannel: String
+        get() = element.lampSupplyChannel
+    override val coordinate: Coordinate
+        get() = element.coordinate!!
+    override val loadResistance: Double
+        get() = element.lampResistor.resistance
+
+    override fun updateLoadState(newState: Double) {
+        element.electricalLoad.state = newState
+    }
 
     override fun process(time: Double) {
         val lampStack = element.inventory.getStackInSlot(LampSocketContainer.LAMP_SLOT_ID)
@@ -34,18 +48,7 @@ class LampSocketProcess(val element: LampSocketElement) : IProcess {
             val lampDescriptor = Utils.getItemObject(lampStack) as LampDescriptor
 
             if (element.poweredByLampSupply) {
-                findBestLampSupply(element.sixNode!!.coordinate, LampSupplyElement.forceCachedLampSupplyUpdate)
-
-                val bestLampSupply = cachedBestChannelHandle?.second
-
-                if (bestLampSupply != null && bestLampSupply.element.getChannelState(bestLampSupply.id)) {
-                    bestLampSupply.element.addToConductance(lampDescriptor.lampData.resistance)
-                    element.electricalLoad.state = bestLampSupply.element.electricalLoad.state
-                } else {
-                    element.electricalLoad.state = 0.0
-                }
-
-                activeLampSupplyConnection = (bestLampSupply != null)
+                activeLampSupplyConnection = LampSupplyConnectionHelper.connectToLampSupply(this)
             }
 
             val lampData = lampDescriptor.lampData
@@ -96,16 +99,6 @@ class LampSocketProcess(val element: LampSocketElement) : IProcess {
 
         updateFastLight(newLightValue)
         updateInventoryAndPublish(lampStack, cableStack, activeLampSupplyConnection, newLightValue)
-    }
-
-    private fun findBestLampSupply(coordinate: Coordinate, forceUpdate: Boolean = false) {
-        val channelMap = LampSupplyElement.globalChannelMap[element.lampSupplyChannel]
-
-        cachedBestChannelHandle = if (channelMap != null) {
-            if (channelMap.contains(cachedBestChannelHandle?.second) && !forceUpdate) return
-            else channelMap.map { Pair(it.element.sixNode!!.coordinate.trueDistanceTo(coordinate), it) }
-                .filter { it.first < it.second.element.range }.minByOrNull { it.first }
-        } else null
     }
 
     private fun updateNearbyBlocks(growRate: Double, nominalLight: Int, actualLight: Int, deltaT: Double) {

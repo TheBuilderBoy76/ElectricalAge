@@ -12,10 +12,13 @@ import mods.eln.sim.IProcess
 import mods.eln.sim.ThermalLoad
 import mods.eln.sim.mna.component.Resistor
 import mods.eln.sim.nbt.NbtElectricalLoad
-import mods.eln.sixnode.lampsupply.LampSupplyElement
+import mods.eln.sixnode.lampsupply.AvailableSupply
+import mods.eln.sixnode.lampsupply.IWirelessPower
+import mods.eln.sixnode.lampsupply.LampSupplyConnectionHelper
 import net.minecraft.entity.player.EntityPlayer
 import java.io.DataOutputStream
 import java.io.IOException
+import kotlin.math.abs
 
 class FestiveElement(node: TransparentNode, descriptor: TransparentNodeDescriptor): TransparentNodeElement(node, descriptor) {
 
@@ -65,29 +68,23 @@ class FestiveElement(node: TransparentNode, descriptor: TransparentNodeDescripto
         }
     }
 
-    class FestiveElementProcess(val elem: FestiveElement): IProcess {
-        private var cachedBestChannelHandle: Pair<Double, LampSupplyElement.PowerSupplyChannelHandle>? = null
+    class FestiveElementProcess(val elem: FestiveElement): IProcess, IWirelessPower {
+        override var previousConnectedSupply: AvailableSupply? = null
 
-        private fun findBestLampSupply(coordinate: Coordinate, forceUpdate: Boolean = false) {
-            val channelMap = LampSupplyElement.globalChannelMap[elem.powerChannel]
+        override val powerChannel: String
+            get() = elem.powerChannel
+        override val coordinate: Coordinate
+            get() = elem.coordinate()
+        override val loadResistance: Double
+            get() = elem.loadResistor.resistance
 
-            cachedBestChannelHandle = if (channelMap != null) {
-                if (channelMap.contains(cachedBestChannelHandle?.second) && !forceUpdate) return
-                else channelMap.map { Pair(it.element.sixNode!!.coordinate.trueDistanceTo(coordinate), it) }
-                    .filter { it.first < it.second.element.range }.minByOrNull { it.first }
-            } else null
+        override fun updateLoadState(newState: Double) {
+            elem.electricalLoad.state = newState
         }
 
         override fun process(time: Double) {
-            findBestLampSupply(elem.node!!.coordinate, LampSupplyElement.forceCachedLampSupplyUpdate)
-            val best = cachedBestChannelHandle?.second
-            if (best != null && best.element.getChannelState(best.id)) {
-                best.element.addToConductance(elem.loadResistor.resistance)
-                elem.electricalLoad.state = best.element.electricalLoad.state
-            } else {
-                elem.electricalLoad.state = 0.0
-            }
-            var lightDouble = 12 * (Math.abs(elem.loadResistor.voltage) - 180.0) / 20.0
+            LampSupplyConnectionHelper.connectToLampSupply(this)
+            var lightDouble = 12 * (abs(elem.loadResistor.voltage) - 180.0) / 20.0
             lightDouble *= 16
             elem.node!!.lightValue = lightDouble.toInt().coerceIn(0, 15)
         }

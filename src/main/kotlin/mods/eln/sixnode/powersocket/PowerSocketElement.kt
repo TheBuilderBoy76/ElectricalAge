@@ -18,7 +18,9 @@ import mods.eln.sim.mna.component.Resistor
 import mods.eln.sim.nbt.NbtElectricalLoad
 import mods.eln.sim.process.destruct.VoltageStateWatchDog
 import mods.eln.sim.process.destruct.WorldExplosion
-import mods.eln.sixnode.lampsupply.LampSupplyElement
+import mods.eln.sixnode.lampsupply.AvailableSupply
+import mods.eln.sixnode.lampsupply.IWirelessPower
+import mods.eln.sixnode.lampsupply.LampSupplyConnectionHelper
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.nbt.NBTTagList
@@ -33,7 +35,7 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
     var descriptor: PowerSocketDescriptor?
     var outputLoad = NbtElectricalLoad("outputLoad")
     var loadResistor = Resistor(null, null) // Connected in process()
-    private var powerSocketSlowProcess: IProcess = PowerSocketSlowProcess()
+    private var powerSocketProcess: IProcess = PowerSocketProcess(this)
     var channel = "Default channel"
     var paintColor = 0
     var voltageWatchdog = VoltageStateWatchDog(outputLoad)
@@ -41,7 +43,7 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
     init {
         electricalLoadList.add(outputLoad)
         electricalComponentList.add(loadResistor)
-        slowProcessList.add(powerSocketSlowProcess)
+        slowProcessList.add(powerSocketProcess)
         loadResistor.highImpedance()
         this.descriptor = descriptor as PowerSocketDescriptor?
         slowProcessList.add(voltageWatchdog)
@@ -49,27 +51,29 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
         voltageWatchdog.setNominalVoltage(300.0)
     }
 
-    internal inner class PowerSocketSlowProcess : IProcess {
-        private var cachedBestChannelHandle: Pair<Double, LampSupplyElement.PowerSupplyChannelHandle>? = null
+    class PowerSocketProcess(val element: PowerSocketElement) : IProcess, IWirelessPower {
+        override var previousConnectedSupply: AvailableSupply? = null
 
-        private fun findBestLampSupply(coordinate: Coordinate, forceUpdate: Boolean = false) {
-            val channelMap = LampSupplyElement.globalChannelMap[channel]
+        override val powerChannel: String
+            get() = element.channel
+        override val coordinate: Coordinate
+            get() = element.coordinate!!
+        override val loadResistance: Double
+            get() = element.loadResistor.resistance
 
-            cachedBestChannelHandle = if (channelMap != null) {
-                if (channelMap.contains(cachedBestChannelHandle?.second) && !forceUpdate) return
-                else channelMap.map { Pair(it.element.sixNode!!.coordinate.trueDistanceTo(coordinate), it) }
-                    .filter { it.first < it.second.element.range }.minByOrNull { it.first }
-            } else null
+        override fun updateLoadState(newState: Double) {
+            element.outputLoad.state = newState
         }
 
+        // Broken. So broken. Needs to be burned with fire.
         override fun process(time: Double) {
-            findBestLampSupply(coordinate!!, LampSupplyElement.forceCachedLampSupplyUpdate)
-            val handle = cachedBestChannelHandle?.second
-            loadResistor.breakConnection()
-            loadResistor.highImpedance()
+            previousConnectedSupply = LampSupplyConnectionHelper.findBestLampSupply(this)
+            val handle = previousConnectedSupply?.powerChannel
+            element.loadResistor.breakConnection()
+            element.loadResistor.highImpedance()
             if (handle != null && handle.element.getChannelState(handle.id)) {
-                loadResistor.connectTo(handle.element.electricalLoad, outputLoad)
-                loadResistor.resistance = 0.1
+                element.loadResistor.connectTo(handle.element.electricalLoad, element.outputLoad)
+                element.loadResistor.resistance = 0.1
             }
         }
     }
