@@ -1,5 +1,6 @@
 package mods.eln.sixnode.powersocket
 
+import mods.eln.Eln
 import mods.eln.generic.GenericItemUsingDamageDescriptor.Companion.getDescriptor
 import mods.eln.item.BrushDescriptor
 import mods.eln.item.IConfigurable
@@ -14,7 +15,7 @@ import mods.eln.node.six.SixNodeElement
 import mods.eln.sim.ElectricalLoad
 import mods.eln.sim.IProcess
 import mods.eln.sim.ThermalLoad
-import mods.eln.sim.mna.component.Resistor
+import mods.eln.sim.mna.component.VoltageSource
 import mods.eln.sim.nbt.NbtElectricalLoad
 import mods.eln.sim.process.destruct.VoltageStateWatchDog
 import mods.eln.sim.process.destruct.WorldExplosion
@@ -28,23 +29,23 @@ import net.minecraft.nbt.NBTTagString
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
+import kotlin.math.pow
 
 class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNodeDescriptor?) : SixNodeElement(
     sixNode!!, side!!, descriptor!!
 ), IConfigurable {
     var descriptor: PowerSocketDescriptor?
-    var outputLoad = NbtElectricalLoad("outputLoad")
-    var loadResistor = Resistor(null, null) // Connected in process()
+    var electricalLoad = NbtElectricalLoad("electricalLoad")
+    var voltageSource = VoltageSource("voltSrc", electricalLoad, null)
     private var powerSocketProcess: IProcess = PowerSocketProcess(this)
     var channel = "Default channel"
     var paintColor = 0
-    var voltageWatchdog = VoltageStateWatchDog(outputLoad)
+    var voltageWatchdog = VoltageStateWatchDog(electricalLoad)
 
     init {
-        electricalLoadList.add(outputLoad)
-        electricalComponentList.add(loadResistor)
+        electricalLoadList.add(electricalLoad)
+        electricalComponentList.add(voltageSource)
         slowProcessList.add(powerSocketProcess)
-        loadResistor.highImpedance()
         this.descriptor = descriptor as PowerSocketDescriptor?
         slowProcessList.add(voltageWatchdog)
         voltageWatchdog.setDestroys(WorldExplosion(this).cableExplosion())
@@ -59,27 +60,27 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
         override val coordinate: Coordinate
             get() = element.coordinate!!
         override val loadResistance: Double
-            get() = element.loadResistor.resistance
+            get() = element.voltageSource.voltage.pow(2) / element.voltageSource.power
 
-        override fun updateLoadState(newState: Double) {
-            element.outputLoad.state = newState
-        }
+        // Unused in this specific implementation
+        override fun updateLoadState(newState: Double) {}
 
-        // Broken. So broken. Needs to be burned with fire.
         override fun process(time: Double) {
             previousConnectedSupply = LampSupplyConnectionHelper.findBestLampSupply(this)
-            val handle = previousConnectedSupply?.powerChannel
-            element.loadResistor.breakConnection()
-            element.loadResistor.highImpedance()
-            if (handle != null && handle.element.getChannelState(handle.id)) {
-                element.loadResistor.connectTo(handle.element.electricalLoad, element.outputLoad)
-                element.loadResistor.resistance = 0.1
+
+            val bestPowerChannel = previousConnectedSupply?.powerChannel
+
+            if (bestPowerChannel != null && bestPowerChannel.element.getChannelState(bestPowerChannel.id)) {
+                element.voltageSource.setVoltage(bestPowerChannel.element.electricalLoad.voltage)
+                bestPowerChannel.element.addToConductance(loadResistance)
+            } else {
+                element.voltageSource.setVoltage(0.0)
             }
         }
     }
 
     override fun getElectricalLoad(lrdu: LRDU, mask: Int): ElectricalLoad {
-        return outputLoad
+        return electricalLoad
     }
 
     override fun getThermalLoad(lrdu: LRDU, mask: Int): ThermalLoad? {
@@ -91,7 +92,7 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
     }
 
     override fun multiMeterString(): String {
-        return plotUIP(outputLoad.voltage, outputLoad.getCurrent())
+        return plotUIP(electricalLoad.voltage, electricalLoad.getCurrent())
     }
 
     override fun thermoMeterString(): String {
@@ -99,7 +100,7 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
     }
 
     override fun initialize() {
-        outputLoad.serialResistance = 0.1
+        Eln.applySmallRs(electricalLoad)
     }
 
     override fun inventoryChanged() {
