@@ -38,7 +38,7 @@ private data class MotorSupplyThevenin(val voltage: Double, val resistance: Doub
 }
 
 class MotorDescriptor(
-    val name: String,
+    name: String,
     obj: Obj3D,
     cable: ElectricalCableDescriptor,
     nominalRads: Float,
