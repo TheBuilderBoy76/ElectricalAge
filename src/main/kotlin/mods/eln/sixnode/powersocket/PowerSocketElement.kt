@@ -7,6 +7,7 @@ import mods.eln.item.IConfigurable
 import mods.eln.misc.Coordinate
 import mods.eln.misc.Direction
 import mods.eln.misc.LRDU
+import mods.eln.misc.NominalVoltage
 import mods.eln.misc.Utils.plotUIP
 import mods.eln.node.NodeBase
 import mods.eln.node.six.SixNode
@@ -16,6 +17,7 @@ import mods.eln.sim.ElectricalLoad
 import mods.eln.sim.IProcess
 import mods.eln.sim.ThermalLoad
 import mods.eln.sim.mna.component.VoltageSource
+import mods.eln.sim.mna.misc.MnaConst
 import mods.eln.sim.nbt.NbtElectricalLoad
 import mods.eln.sim.process.destruct.VoltageStateWatchDog
 import mods.eln.sim.process.destruct.WorldExplosion
@@ -29,6 +31,7 @@ import net.minecraft.nbt.NBTTagString
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
+import kotlin.math.abs
 import kotlin.math.pow
 
 class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNodeDescriptor?) : SixNodeElement(
@@ -49,7 +52,7 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
         this.descriptor = descriptor as PowerSocketDescriptor?
         slowProcessList.add(voltageWatchdog)
         voltageWatchdog.setDestroys(WorldExplosion(this).cableExplosion())
-        voltageWatchdog.setNominalVoltage(300.0)
+        voltageWatchdog.setNominalVoltage(NominalVoltage.V240)
     }
 
     class PowerSocketProcess(val element: PowerSocketElement) : IProcess, IWirelessPower {
@@ -60,22 +63,17 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
         override val coordinate: Coordinate
             get() = element.coordinate!!
         override val loadResistance: Double
-            get() = element.voltageSource.voltage.pow(2) / element.voltageSource.power
+            get() {
+                return if (abs(element.voltageSource.power) < MnaConst.almostZero) MnaConst.highImpedance
+                else element.voltageSource.voltage.pow(2) / abs(element.voltageSource.power)
+            }
 
-        // Unused in this specific implementation
-        override fun updateLoadState(newState: Double) {}
+        override fun updateLoadVoltage(newVoltage: Double) {
+            element.voltageSource.voltage = newVoltage
+        }
 
         override fun process(time: Double) {
-            previousConnectedSupply = LampSupplyConnectionHelper.findBestLampSupply(this)
-
-            val bestPowerChannel = previousConnectedSupply?.powerChannel
-
-            if (bestPowerChannel != null && bestPowerChannel.element.getChannelState(bestPowerChannel.id)) {
-                element.voltageSource.setVoltage(bestPowerChannel.element.electricalLoad.voltage)
-                bestPowerChannel.element.addToConductance(loadResistance)
-            } else {
-                element.voltageSource.setVoltage(0.0)
-            }
+            LampSupplyConnectionHelper.connectToLampSupply(this)
         }
     }
 

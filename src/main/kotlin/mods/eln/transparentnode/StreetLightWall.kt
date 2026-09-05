@@ -109,8 +109,8 @@ class StreetLightWallElement(node: TransparentNode, descriptor: TransparentNodeD
         override val loadResistance: Double
             get() = elem.loadResistor.resistance
 
-        override fun updateLoadState(newState: Double) {
-            elem.electricalLoad.state = newState
+        override fun updateLoadVoltage(newVoltage: Double) {
+            elem.electricalLoad.voltage = newVoltage
         }
 
         override fun process(time: Double) {

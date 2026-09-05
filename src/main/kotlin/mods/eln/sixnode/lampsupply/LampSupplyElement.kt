@@ -17,6 +17,7 @@ import mods.eln.node.six.SixNodeElementInventory
 import mods.eln.sim.ElectricalLoad
 import mods.eln.sim.ThermalLoad
 import mods.eln.sim.mna.component.Resistor
+import mods.eln.sim.mna.misc.MnaConst
 import mods.eln.sim.nbt.NbtElectricalLoad
 import mods.eln.sim.process.destruct.VoltageStateWatchDog
 import mods.eln.sim.process.destruct.WorldExplosion
@@ -35,6 +36,7 @@ import net.minecraft.nbt.NBTTagString
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
+import kotlin.math.abs
 
 class LampSupplyElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: SixNodeDescriptor) :
     SixNodeElement(sixNode, side, sixNodeDescriptor), IConfigurable {
@@ -122,7 +124,7 @@ class LampSupplyElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
     }
 
     fun addToConductance(resistance: Double) {
-        connectedConductance += (1.0 / resistance)
+        connectedConductance += (1.0 / resistance.coerceIn(MnaConst.noImpedance, MnaConst.highImpedance))
     }
 
     private fun registerAllPowerChannels() {
@@ -201,13 +203,13 @@ class LampSupplyElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
         val info: MutableMap<String, String> = LinkedHashMap()
 
         for (idx in 0..<LampSupplyDescriptor.CHANNEL_COUNT) {
-            if (!localEntries[idx].powerChannel.isEmpty()) {
+            if (localEntries[idx].powerChannel.isNotEmpty()) {
                 val onOffString = if (localChannelStates[idx]) "§a" + I18N.tr("ON") else "§c" + I18N.tr("OFF")
                 info[I18N.tr("Channel %1$", idx + 1)] = I18N.tr("%1$ = %2$", localEntries[idx].powerChannel, onOffString)
             }
         }
 
-        info[I18N.tr("Total power")] = Utils.plotPower("", electricalLoad.voltage * electricalLoad.current)
+        info[I18N.tr("Total power")] = Utils.plotPower("", abs(electricalLoad.voltage) * electricalLoad.current)
         if (Utils.isWailaEasyModeEnabled()) info[I18N.tr("Voltage")] = Utils.plotVolt("", electricalLoad.voltage)
         if (Utils.isDebugEnabled()) info[I18N.tr("Range")] = Utils.plotValue(range.toDouble())
 
@@ -233,9 +235,7 @@ class LampSupplyElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
             is CurrentCableDescriptor -> takeItem = true
         }
 
-        return if (takeItem) {
-            inventoryProxy.take(entityPlayer.currentEquippedItem, this, notifyInventoryChange = true)
-        } else false
+        return takeItem && inventoryProxy.take(entityPlayer.currentEquippedItem, this, notifyInventoryChange = true)
     }
 
     /**

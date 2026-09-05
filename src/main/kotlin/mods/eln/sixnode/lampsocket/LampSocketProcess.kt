@@ -33,8 +33,8 @@ class LampSocketProcess(val element: LampSocketElement) : IProcess, IWirelessPow
     override val loadResistance: Double
         get() = element.lampResistor.resistance
 
-    override fun updateLoadState(newState: Double) {
-        element.electricalLoad.state = newState
+    override fun updateLoadVoltage(newVoltage: Double) {
+        element.electricalLoad.voltage = newVoltage
     }
 
     override fun process(time: Double) {

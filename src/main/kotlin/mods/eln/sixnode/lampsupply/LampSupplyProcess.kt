@@ -14,10 +14,9 @@ class LampSupplyProcess(val element: LampSupplyElement) : IProcess {
     private val txStrength = hashMapOf<IWirelessSignalTx, Double>()
 
     override fun process(time: Double) {
-        if (element.connectedConductance <= (1 / MnaConst.highImpedance)) element.loadResistor.highImpedance()
-        else element.loadResistor.setResistance(1.0 / element.connectedConductance)
-
+        element.loadResistor.setResistance(1.0 / element.connectedConductance.coerceIn(MnaConst.noImpedance, MnaConst.highImpedance))
         element.connectedConductance = 0.0
+
         sleepTimer -= time
 
         if (sleepTimer < 0) {
@@ -36,9 +35,7 @@ class LampSupplyProcess(val element: LampSupplyElement) : IProcess {
                 "false" -> element.localChannelStates[idx] = false
                 else -> {
                     val txs = txSet[localEntry.wirelessChannel]
-
-                    if (txs == null) element.localChannelStates[idx] = false
-                    else element.localChannelStates[idx] = element.localAggregators[idx][localEntry.aggregator].aggregate(txs) >= 0.5
+                    element.localChannelStates[idx] = (txs != null) && (element.localAggregators[idx][localEntry.aggregator].aggregate(txs) >= 0.5)
                 }
             }
         }

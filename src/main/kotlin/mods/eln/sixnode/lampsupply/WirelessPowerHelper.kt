@@ -10,12 +10,12 @@ interface IWirelessPower {
     val coordinate: Coordinate
     val loadResistance: Double
 
-    fun updateLoadState(newState: Double)
+    fun updateLoadVoltage(newVoltage: Double)
 }
 
 object LampSupplyConnectionHelper {
 
-    fun findBestLampSupply(device: IWirelessPower): AvailableSupply? {
+    private fun findBestLampSupply(device: IWirelessPower): AvailableSupply? {
         val availableSupplies = LampSupplyElement.globalChannelMap[device.powerChannel]
 
         return when {
@@ -41,9 +41,9 @@ object LampSupplyConnectionHelper {
 
         if (bestPowerChannel != null && bestPowerChannel.element.getChannelState(bestPowerChannel.id)) {
             bestPowerChannel.element.addToConductance(device.loadResistance)
-            device.updateLoadState(bestPowerChannel.element.electricalLoad.state)
+            device.updateLoadVoltage(bestPowerChannel.element.electricalLoad.voltage)
         } else {
-            device.updateLoadState(0.0)
+            device.updateLoadVoltage(0.0)
         }
 
         return (bestPowerChannel != null)

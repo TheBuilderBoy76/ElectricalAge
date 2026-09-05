@@ -26,6 +26,7 @@ import net.minecraft.nbt.NBTTagCompound
 import org.lwjgl.opengl.GL11
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import kotlin.math.abs
 
 class EmergencyLampDescriptor(name: String, val cable: ElectricalCableDescriptor, val batteryCapacity: Double,
                               val nominalVoltage: Double,
@@ -196,8 +197,8 @@ class EmergencyLampProcess(val element: EmergencyLampElement) : IProcess, IWirel
     override val loadResistance: Double
         get() = element.chargingResistor.resistance
 
-    override fun updateLoadState(newState: Double) {
-        element.load.state = newState
+    override fun updateLoadVoltage(newVoltage: Double) {
+        element.load.voltage = newVoltage
     }
 
     override fun process(time: Double) {
@@ -205,7 +206,7 @@ class EmergencyLampProcess(val element: EmergencyLampElement) : IProcess, IWirel
             element.isConnectedToLampSupply = LampSupplyConnectionHelper.connectToLampSupply(this)
         }
 
-        if (element.chargingResistor.voltage > 0.5 * element.desc.nominalVoltage) {
+        if (abs(element.chargingResistor.voltage) > 0.5 * element.desc.nominalVoltage) {
             element.on = false
             if (element.charge < element.desc.batteryCapacity) {
                 // Use setter to update resistance along with the state.
