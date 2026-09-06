@@ -14,6 +14,7 @@ import mods.eln.sim.ElectricalLoad;
 import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.nbt.NbtElectricalGateOutput;
 import mods.eln.sim.nbt.NbtElectricalGateOutputProcess;
+import mods.eln.sixnode.lampsupply.PowerChannelTextboxHelper;
 import mods.eln.sixnode.wirelesssignal.aggregator.BiggerAggregator;
 import mods.eln.sixnode.wirelesssignal.aggregator.IWirelessSignalAggregator;
 import mods.eln.sixnode.wirelesssignal.aggregator.SmallerAggregator;
@@ -35,7 +36,7 @@ public class WirelessSignalRxElement extends SixNodeElement implements IConfigur
     NbtElectricalGateOutput outputGate = new NbtElectricalGateOutput("outputGate");
     NbtElectricalGateOutputProcess outputGateProcess = new NbtElectricalGateOutputProcess("outputGateProcess", outputGate);
 
-    public String channel = "Default channel";
+    public String channel = PowerChannelTextboxHelper.DEFAULT_CHANNEL_STRING;
 
     WirelessSignalRxProcess slowProcess = new WirelessSignalRxProcess(this);
 

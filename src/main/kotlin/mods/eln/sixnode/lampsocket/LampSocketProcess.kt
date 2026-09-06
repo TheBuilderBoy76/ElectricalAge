@@ -55,8 +55,8 @@ class LampSocketProcess(val element: LampSocketElement) : IProcess, IWirelessPow
             val lampVoltage = abs(element.lampResistor.voltage)
 
             if (lampVoltage > (lampData.nominalU * lampData.technology.minimalUFactor)) {
-                val num: Double = lampVoltage - (lampData.nominalU * lampData.technology.minimalUFactor)
-                val den: Double = lampData.nominalU - (lampData.nominalU * lampData.technology.minimalUFactor)
+                val num = lampVoltage - (lampData.nominalU * lampData.technology.minimalUFactor)
+                val den = lampData.nominalU - (lampData.nominalU * lampData.technology.minimalUFactor)
 
                 newLightValue = ((num / den) * lampData.nominalLightValue).toInt()
 

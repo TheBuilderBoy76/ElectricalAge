@@ -2,13 +2,13 @@ package mods.eln.sixnode.powersocket
 
 import mods.eln.Eln
 import mods.eln.generic.GenericItemUsingDamageDescriptor.Companion.getDescriptor
+import mods.eln.i18n.I18N
 import mods.eln.item.BrushDescriptor
 import mods.eln.item.IConfigurable
-import mods.eln.misc.Coordinate
-import mods.eln.misc.Direction
-import mods.eln.misc.LRDU
-import mods.eln.misc.NominalVoltage
+import mods.eln.misc.*
+import mods.eln.misc.Utils.plotPower
 import mods.eln.misc.Utils.plotUIP
+import mods.eln.misc.Utils.plotVolt
 import mods.eln.node.NodeBase
 import mods.eln.node.six.SixNode
 import mods.eln.node.six.SixNodeDescriptor
@@ -24,10 +24,9 @@ import mods.eln.sim.process.destruct.WorldExplosion
 import mods.eln.sixnode.lampsupply.AvailableSupply
 import mods.eln.sixnode.lampsupply.IWirelessPower
 import mods.eln.sixnode.lampsupply.LampSupplyConnectionHelper
+import mods.eln.sixnode.lampsupply.PowerChannelTextboxHelper
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraft.nbt.NBTTagList
-import net.minecraft.nbt.NBTTagString
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
@@ -41,8 +40,9 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
     var electricalLoad = NbtElectricalLoad("electricalLoad")
     var voltageSource = VoltageSource("voltSrc", electricalLoad, null)
     private var powerSocketProcess: IProcess = PowerSocketProcess(this)
-    var channel = "Default channel"
-    var paintColor = 0
+    var channel = PowerChannelTextboxHelper.DEFAULT_CHANNEL_STRING
+    var activeLampSupplyConnection = false
+    private var paintColor = 0
     var voltageWatchdog = VoltageStateWatchDog(electricalLoad)
 
     init {
@@ -73,7 +73,8 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
         }
 
         override fun process(time: Double) {
-            LampSupplyConnectionHelper.connectToLampSupply(this)
+            element.activeLampSupplyConnection = LampSupplyConnectionHelper.connectToLampSupply(this)
+            element.needPublish()
         }
     }
 
@@ -95,6 +96,19 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
 
     override fun thermoMeterString(): String {
         return ""
+    }
+
+    override fun getWaila(): Map<String, String> {
+        val info: MutableMap<String, String> = LinkedHashMap()
+
+        info[I18N.tr("Power Provided")] = plotPower("", voltageSource.power)
+
+        if (Utils.isWailaEasyModeEnabled()) {
+            info[I18N.tr("Voltage")] = plotVolt("", voltageSource.voltage)
+            info[I18N.tr("Channel")] = channel
+        }
+
+        return info
     }
 
     override fun initialize() {
@@ -124,7 +138,7 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
         super.networkUnserialize(stream)
         try {
             when (stream.readByte()) {
-                setChannelId -> {
+                SET_CHANNEL_EVENT -> {
                     channel = stream.readUTF()
                     needPublish()
                 }
@@ -142,6 +156,7 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
         super.networkSerialize(stream)
         try {
             stream.writeUTF(channel)
+            stream.writeBoolean(activeLampSupplyConnection)
             stream.writeInt(paintColor)
         } catch (e: IOException) {
             e.printStackTrace()
@@ -171,22 +186,17 @@ class PowerSocketElement(sixNode: SixNode?, side: Direction?, descriptor: SixNod
     }
 
     override fun readConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
-        if (compound.hasKey("powerChannels")) {
-            val newChannel = compound.getTagList("powerChannels", 8).getStringTagAt(0)
-            if (newChannel != null && !newChannel.isEmpty()) {
-                channel = newChannel
-                needPublish()
-            }
+        if (compound.hasKey("lampSupplyChannel")) {
+            channel = compound.getString("lampSupplyChannel")
+            needPublish()
         }
     }
 
     override fun writeConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
-        val list = NBTTagList()
-        list.appendTag(NBTTagString(channel))
-        compound.setTag("powerChannels", list)
+        compound.setString("lampSupplyChannel", channel)
     }
 
     companion object {
-        const val setChannelId: Byte = 1
+        const val SET_CHANNEL_EVENT: Byte = 1
     }
 }

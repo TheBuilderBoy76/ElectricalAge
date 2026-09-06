@@ -112,7 +112,7 @@ class LampSupplyElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
         slowProcessList.add(voltageWatchdog)
         slowProcessList.add(lampSupplyProcess)
 
-        for (idx in 0..<LampSupplyDescriptor.CHANNEL_COUNT) {
+        repeat(LampSupplyDescriptor.CHANNEL_COUNT) {
             localEntries.add(LocalLampSupplyEntry("", "", 2))
             localChannelStates.add(false)
             localAggregators.add(listOf(BiggerAggregator(), SmallerAggregator(), ToggleAggregator()))

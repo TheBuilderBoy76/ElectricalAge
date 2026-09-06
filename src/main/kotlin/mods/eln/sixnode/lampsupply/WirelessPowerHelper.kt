@@ -1,5 +1,7 @@
 package mods.eln.sixnode.lampsupply
 
+import mods.eln.gui.GuiTextFieldEln
+import mods.eln.i18n.I18N
 import mods.eln.misc.Coordinate
 
 data class AvailableSupply(val powerChannel: LampSupplyElement.PowerSupplyChannelHandle, val distance: Double)
@@ -47,6 +49,33 @@ object LampSupplyConnectionHelper {
         }
 
         return (bestPowerChannel != null)
+    }
+
+}
+
+object PowerChannelTextboxHelper {
+
+    // This can't be translated because it is a constant
+    const val DEFAULT_CHANNEL_STRING = "Default channel"
+
+    fun initPowerChannelTextbox(textbox: GuiTextFieldEln, powerChannel: String) {
+        textbox.setText(powerChannel)
+        textbox.setComment(0, I18N.tr("Specify the lamp supply channel"))
+    }
+
+    fun updatePowerChannelTextboxTooltip(
+        textbox: GuiTextFieldEln,
+        powerChannel: String,
+        connectedToLampSupply: Boolean,
+        lampInserted: Boolean = true,
+        cableInserted: Boolean = true
+    ) {
+        when {
+            !cableInserted -> textbox.setComment(1, "§4" + I18N.tr("Cable slot empty"))
+            !lampInserted -> textbox.setComment(1, "§4" + I18N.tr("Lamp slot empty"))
+            connectedToLampSupply -> textbox.setComment(1, "§2" + I18N.tr("Connected to %1$", powerChannel))
+            else -> textbox.setComment(1, "§4" + I18N.tr("%1$ is not in range!", powerChannel))
+        }
     }
 
 }

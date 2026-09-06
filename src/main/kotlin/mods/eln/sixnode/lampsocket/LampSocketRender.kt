@@ -14,6 +14,7 @@ import mods.eln.node.six.SixNodeElementRender
 import mods.eln.node.six.SixNodeEntity
 import mods.eln.sixnode.genericcable.GenericCableDescriptor
 import mods.eln.sixnode.lampsocket.objrender.LampSocketSuspendedObjRender
+import mods.eln.sixnode.lampsupply.PowerChannelTextboxHelper
 import mods.eln.sound.SoundCommand
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.entity.Entity
@@ -45,7 +46,7 @@ class LampSocketRender(tileEntity: SixNodeEntity, side: Direction, sixNodeDescri
     private var cableDescriptor: GenericCableDescriptor? = null
 
     var poweredByLampSupply = true
-    var lampSupplyChannel = "Default channel"
+    var lampSupplyChannel = PowerChannelTextboxHelper.DEFAULT_CHANNEL_STRING
     var activeLampSupplyConnection = false
     var projectionRotationAngle = 0.0
     var paintColor = DEFAULT_PAINT_COLOR

@@ -19,6 +19,7 @@ import mods.eln.sim.mna.component.Resistor;
 import mods.eln.sim.nbt.NbtElectricalLoad;
 import mods.eln.sim.process.destruct.VoltageStateWatchDog;
 import mods.eln.sim.process.destruct.WorldExplosion;
+import mods.eln.sixnode.lampsupply.PowerChannelTextboxHelper;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
@@ -52,7 +53,7 @@ public class BatteryChargerElement extends SixNodeElement {
 
     VoltageStateWatchDog voltageWatchDog = new VoltageStateWatchDog(powerLoad);
 
-    public String channel = "Default channel";
+    public String channel = PowerChannelTextboxHelper.DEFAULT_CHANNEL_STRING;
 
     boolean invChanged = false;
 

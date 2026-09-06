@@ -3,6 +3,7 @@ package mods.eln.sixnode
 import mods.eln.cable.CableRenderDescriptor
 import mods.eln.gui.*
 import mods.eln.i18n.I18N.tr
+import mods.eln.item.IConfigurable
 import mods.eln.misc.*
 import mods.eln.node.NodeBase
 import mods.eln.node.NodePeriodicPublishProcess
@@ -19,6 +20,7 @@ import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor
 import mods.eln.sixnode.lampsupply.AvailableSupply
 import mods.eln.sixnode.lampsupply.IWirelessPower
 import mods.eln.sixnode.lampsupply.LampSupplyConnectionHelper
+import mods.eln.sixnode.lampsupply.PowerChannelTextboxHelper
 import net.minecraft.client.gui.GuiButton
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
@@ -27,9 +29,9 @@ import org.lwjgl.opengl.GL11
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import kotlin.math.abs
+import kotlin.math.pow
 
-class EmergencyLampDescriptor(name: String, val cable: ElectricalCableDescriptor, val batteryCapacity: Double,
-                              val nominalVoltage: Double,
+class EmergencyLampDescriptor(name: String, val cable: ElectricalCableDescriptor, val batteryCapacity: Double, val nominalVoltage: Double,
                               val chargePower: Double, val consumption: Double, val lightLevel: Int, model: Obj3D)
     : SixNodeDescriptor(name, EmergencyLampElement::class.java, EmergencyLampRender::class.java) {
 
@@ -92,7 +94,7 @@ class EmergencyLampDescriptor(name: String, val cable: ElectricalCableDescriptor
 }
 
 class EmergencyLampElement(sixNode: SixNode, side: Direction, descriptor: SixNodeDescriptor)
-    : SixNodeElement(sixNode, side, descriptor) {
+    : SixNodeElement(sixNode, side, descriptor), IConfigurable {
 
     enum class Event(val value: Byte) {
         TOGGLE_POWERED_BY_CABLE(1),
@@ -109,7 +111,7 @@ class EmergencyLampElement(sixNode: SixNode, side: Direction, descriptor: SixNod
     var poweredByCable by published(false, {
         if (it) isConnectedToLampSupply = false
     }, triggerReconnect = true)
-    var channel by published("Default channel")
+    var channel by published(PowerChannelTextboxHelper.DEFAULT_CHANNEL_STRING)
     var isConnectedToLampSupply by published(false)
 
     val process = EmergencyLampProcess(this)
@@ -141,15 +143,27 @@ class EmergencyLampElement(sixNode: SixNode, side: Direction, descriptor: SixNod
         append(Utils.plotPercent("Charge:", charge / (sixNodeElementDescriptor as EmergencyLampDescriptor).batteryCapacity))
     }
     override fun thermoMeterString(): String = ""
-    override fun getWaila() = mapOf(
-        tr("State") to when {
+
+    override fun getWaila(): Map<String, String> {
+        val info: MutableMap<String, String> = LinkedHashMap()
+
+        info[tr("State")] = when {
             on -> tr("On")
             chargingResistor.state -> tr("Charging...")
             charge <= 0.0 -> tr("Batteries empty")
             else -> tr("Fully charged")
-        },
-        tr("Charge") to Utils.plotPercent("", charge / (sixNodeElementDescriptor as EmergencyLampDescriptor).batteryCapacity)
-    )
+        }
+
+        info[tr("Charge")] = Utils.plotPercent("", charge / (sixNodeElementDescriptor as EmergencyLampDescriptor).batteryCapacity)
+        info[tr("Power Consumption")] = Utils.plotPower("", chargingResistor.voltage.pow(2) / chargingResistor.resistance)
+
+        if (Utils.isWailaEasyModeEnabled()) {
+            info[tr("Voltage")] = Utils.plotVolt("", chargingResistor.voltage)
+            info[tr("Channel")] = channel
+        }
+
+        return info
+    }
 
     override fun networkSerialize(stream: DataOutputStream) {
         super.networkSerialize(stream)
@@ -185,6 +199,27 @@ class EmergencyLampElement(sixNode: SixNode, side: Direction, descriptor: SixNod
     }
 
     override fun hasGui() = true
+
+    override fun readConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
+        var publishChanges = false
+
+        if (compound.hasKey("poweredByCable")) {
+            poweredByCable = compound.getBoolean("poweredByCable")
+            publishChanges = true
+        }
+
+        if (compound.hasKey("lampSupplyChannel")) {
+            channel = compound.getString("lampSupplyChannel")
+            publishChanges = true
+        }
+
+        if (publishChanges) needPublish()
+    }
+
+    override fun writeConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
+        compound.setBoolean("poweredByCable", poweredByCable)
+        compound.setString("lampSupplyChannel", channel)
+    }
 }
 
 class EmergencyLampProcess(val element: EmergencyLampElement) : IProcess, IWirelessPower {
@@ -204,6 +239,7 @@ class EmergencyLampProcess(val element: EmergencyLampElement) : IProcess, IWirel
     override fun process(time: Double) {
         if (!element.poweredByCable) {
             element.isConnectedToLampSupply = LampSupplyConnectionHelper.connectToLampSupply(this)
+            element.needPublish()
         }
 
         if (abs(element.chargingResistor.voltage) > 0.5 * element.desc.nominalVoltage) {
@@ -234,7 +270,7 @@ class EmergencyLampRender(entity: SixNodeEntity, side: Direction, descriptor: Si
     var charge = 0f
     var on = false
     var poweredByCable = false
-    var channel = "Default channel"
+    var channel = PowerChannelTextboxHelper.DEFAULT_CHANNEL_STRING
     var isConnectedToLampSupply = false
 
     override fun draw() {
@@ -271,8 +307,7 @@ class EmergencyLampGui(private var render: EmergencyLampRender)
         super.initGui()
         buttonSupplyType = newGuiButton(18, 12, 140, "")
         channel = newGuiTextField(19, 38, 138)
-        channel.setComment(0, tr("Specify the supply channel"))
-        channel.text = render.channel
+        PowerChannelTextboxHelper.initPowerChannelTextbox(channel, render.channel)
         charge = newGuiVerticalProgressBar(166, 12, 16, 39)
         charge.setColor(0.2f, 0.5f, 0.8f)
     }
@@ -292,12 +327,9 @@ class EmergencyLampGui(private var render: EmergencyLampRender)
         super.preDraw(f, x, y)
 
         if (!render.poweredByCable) {
-            buttonSupplyType.displayString = tr("Powered by Lamp Supply")
+            buttonSupplyType.displayString = tr("Powered by lamp supply")
             channel.visible = true
-            if (render.isConnectedToLampSupply)
-                channel.setComment(1, "§2" + tr("connected to " + render.channel))
-            else
-                channel.setComment(1, "§4" + tr("%1$ is not in range!", render.channel))
+            PowerChannelTextboxHelper.updatePowerChannelTextboxTooltip(channel, render.channel, render.isConnectedToLampSupply)
         } else {
             channel.visible = false
             buttonSupplyType.displayString = tr("Powered by cable")

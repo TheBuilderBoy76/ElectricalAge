@@ -32,6 +32,7 @@ import mods.eln.sim.process.destruct.VoltageStateWatchDog
 import mods.eln.sim.process.destruct.WorldExplosion
 import mods.eln.sixnode.currentcable.CurrentCableDescriptor
 import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor
+import mods.eln.sixnode.lampsupply.PowerChannelTextboxHelper
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.inventory.Container
@@ -47,7 +48,7 @@ class LampSocketElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
     SixNodeElement(sixNode, side, sixNodeDescriptor), IConfigurable {
 
     companion object {
-        var lastChannel = "Default channel"
+        var lastChannel = PowerChannelTextboxHelper.DEFAULT_CHANNEL_STRING
         var lastLampStack: ItemStack? = null
         var lastCableStack: ItemStack? = null
         var placingPlayerIsCreative = false
@@ -73,7 +74,9 @@ class LampSocketElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
     private val lampSocketProcess = LampSocketProcess(this)
 
     var poweredByLampSupply = true
-    var lampSupplyChannel = if (Eln.config.getBooleanOrElse("gameplay.qol.rememberLastLampSignalName", false)) lastChannel else "Default channel"
+    var lampSupplyChannel =
+        if (Eln.config.getBooleanOrElse("gameplay.qol.rememberLastLampSignalName", false)) lastChannel
+        else PowerChannelTextboxHelper.DEFAULT_CHANNEL_STRING
     var activeLampSupplyConnection = false
     var projectionRotationAngle = 0.0
     private var paintColor = LampSocketRender.DEFAULT_PAINT_COLOR
@@ -227,7 +230,7 @@ class LampSocketElement(sixNode: SixNode, side: Direction, sixNodeDescriptor: Si
         needPublish()
     }
 
-    fun computeInventory() {
+    private fun computeInventory() {
         val lampStack = inventory.getStackInSlot(LampSocketContainer.LAMP_SLOT_ID)
         val cableStack = inventory.getStackInSlot(LampSocketContainer.CABLE_SLOT_ID)
 
